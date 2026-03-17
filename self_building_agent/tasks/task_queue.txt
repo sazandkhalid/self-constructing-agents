@@ -1,0 +1,17 @@
+Write a python function that reverses a string
+Write a python function that reads a CSV file and returns the column names
+Write a unit test for a function that adds two numbers
+Refactor this code to handle errors gracefully: open('file.txt').read()
+Write a bash script that backs up a folder to a timestamped zip file
+Write a Python function that chunks a long document into overlapping segments for LLM context windows, where each chunk is max 512 tokens and overlaps by 50 tokens with the previous chunk
+Build a retry wrapper for LLM API calls that handles rate limiting with exponential backoff and logs each failed attempt with its error type
+Write a Python class that maintains a conversation history with an LLM, automatically summarizes older messages when the context window exceeds 3000 tokens, and preserves the summary in place of the dropped messages
+Implement a simple RAG pipeline: given a list of text documents and a query, embed them using sentence-transformers, store in a numpy matrix, retrieve the top 3 most similar chunks using cosine similarity, and pass them as context to an LLM
+Write a function that takes an LLM response and a JSON schema, validates whether the response conforms to the schema, and if not re-prompts the model with the validation errors until it produces valid output or hits 3 retries
+Build a prompt versioning system that stores prompt templates in a local folder, tracks which version was used for each LLM call in a log, and allows rollback to a previous version by name
+Implement a self-evaluating LLM pipeline where one LLM call generates an answer and a second call scores it from 1-10 with reasoning, looping until the score is above 7 or 3 attempts are exhausted
+Write a Python decorator that automatically caches LLM responses to disk keyed by the hash of the prompt, returning the cached response on repeated calls instead of hitting the API
+Refactor a monolithic 200-line Python script into a clean module structure with separation of concerns, proper error handling, type hints throughout, and a test file covering the core logic
+Build a code review agent that takes a Python file as input, identifies code smells, suggests refactors with before/after examples, and outputs a structured markdown report
+Implement a multi-step reasoning chain where an LLM first breaks a complex coding task into subtasks, executes each subtask sequentially passing outputs as inputs to the next, and synthesizes a final solution
+Write a tool that monitors a folder for new Python files, automatically runs them through a linter and a complexity scorer, and generates a one-paragraph LLM summary of what each file does and its quality issues
