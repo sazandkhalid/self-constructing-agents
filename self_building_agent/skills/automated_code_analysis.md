@@ -1,10 +1,16 @@
 ---
 name: automated_code_analysis
-tags: [python, linting, complexity, analysis, monitoring, watchdog]
+tags:
+- python
+- linting
+- complexity
+- analysis
+- monitoring
+- watchdog
 trigger: task involves analyzing Python code quality, linting, or complexity scoring
 type: tool
 version: 1
-success_count: 0
+success_count: 2
 fail_count: 0
 ---
 # Automated Code Analysis

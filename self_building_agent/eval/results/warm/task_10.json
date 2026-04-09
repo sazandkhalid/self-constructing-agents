@@ -1,0 +1,15 @@
+{
+  "index": 10,
+  "tier": "TIER2",
+  "task": "Write a new request body parameter helper following the structure used in fastapi/params.py Body, adding a parameter called transform that takes a callable applied to the parsed value.",
+  "response": "ERROR: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kezmsfmwffwt1mn4de84znbt` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99685, Requested 3216. Please try again in 41m46.464s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+  "outcome": "fail",
+  "skills_used": [],
+  "skills_considered": 0,
+  "py_skill_verified": null,
+  "py_skill_failed": false,
+  "skill_composed": false,
+  "composed_from": [],
+  "code_executed": 0,
+  "exec_results_count": 0
+}

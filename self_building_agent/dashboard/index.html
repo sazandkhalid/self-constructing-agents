@@ -1,0 +1,666 @@
+<!--
+  Self-Constructing Agent Dashboard
+  =================================
+  To run:
+    cd /Users/sazankhalid/Downloads/self-constructing-agents/self_building_agent
+    python -m http.server 8080
+  Then open: http://localhost:8080/dashboard/
+
+  Data sources (relative):
+    ../logs/log.jsonl
+    ../skills_py/index.json  (optional)
+    ../skills_py/<file>.py
+    ../skills_py/archive/<file>.py  (optional)
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SELF-CONSTRUCTING AGENT :: TERRAIN</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0f;
+    --bg2:#0f0f18;
+    --cyan:#00f5ff;
+    --green:#39ff14;
+    --amber:#ff8c00;
+    --red:#ff2d55;
+    --white:#ffffff;
+    --dim:#2a2a38;
+    --fg:#c8c8d8;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:'Share Tech Mono',monospace;height:100%;overflow:hidden}
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:9999;
+    background:repeating-linear-gradient(0deg,rgba(0,245,255,0.02) 0 1px,transparent 1px 3px);
+  }
+  h1,h2,h3,.hdr{font-family:'Rajdhani',sans-serif;letter-spacing:2px;text-transform:uppercase;margin:0}
+  .app{display:grid;grid-template-rows:50px 1fr 120px;height:100vh;gap:6px;padding:6px}
+  /* Stats bar */
+  .stats{display:grid;grid-template-columns:repeat(6,1fr) auto;gap:6px;align-items:center;background:var(--bg2);border:1px solid var(--dim);padding:0 10px}
+  .stat{display:flex;flex-direction:column;justify-content:center;padding:4px 8px;border-left:2px solid var(--cyan)}
+  .stat:first-child{border-left:none}
+  .stat .lbl{font-size:10px;color:#6a6a80;font-family:'Rajdhani',sans-serif;letter-spacing:1px}
+  .stat .val{font-size:20px;color:var(--cyan);font-family:'VT323',monospace;text-shadow:0 0 6px var(--cyan)}
+  .ctrls{display:flex;gap:6px}
+  .btn{background:transparent;border:1px solid var(--cyan);color:var(--cyan);font-family:'Rajdhani',sans-serif;font-weight:600;padding:6px 12px;cursor:pointer;letter-spacing:1px;font-size:12px}
+  .btn:hover{background:rgba(0,245,255,0.15);box-shadow:0 0 10px var(--cyan)}
+  .btn.on{background:var(--cyan);color:#000}
+  /* Main */
+  .main{display:grid;grid-template-columns:260px 1fr 280px;gap:6px;min-height:0}
+  .panel{background:var(--bg2);border:1px solid var(--dim);display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  .panel h2{font-size:12px;color:var(--cyan);padding:6px 10px;border-bottom:1px solid var(--dim);background:#0c0c16}
+  .panel .body{flex:1;overflow:auto;padding:6px 10px;min-height:0}
+  /* Activity feed */
+  .feed{position:relative}
+  .feed::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(57,255,20,0.04) 0 1px,transparent 1px 2px)}
+  .feed-line{font-size:11px;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px dashed #1a1a28;padding:3px 0}
+  .feed-line .t{color:#5a5a70}
+  .feed-line .task{color:var(--fg)}
+  .feed-line .arrow{color:#3a3a50}
+  .feed-line .ok{color:var(--green)}
+  .feed-line .fail{color:var(--red)}
+  .feed-line .sk{color:var(--cyan)}
+  /* Canvas */
+  .terrain-wrap{position:relative;padding:0}
+  .terrain-wrap .body{padding:0}
+  #terrain{display:block;width:100%;height:100%}
+  .overlay-tip{position:absolute;top:10px;right:10px;font-size:10px;color:#5a5a70;font-family:'VT323',monospace}
+  /* Registry */
+  .skill-row{padding:6px;margin-bottom:4px;border-left:2px solid var(--dim);cursor:pointer;font-size:11px;background:#0c0c16}
+  .skill-row:hover{background:#15152a}
+  .skill-row.hl{border-left-color:var(--white);background:#1a1a30}
+  .skill-row .name{color:var(--cyan);font-weight:bold}
+  .skill-row .meta{color:#6a6a80;font-size:10px;margin-top:2px}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
+  .dot.verified{background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+  .dot.active{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .dot.decaying{background:var(--amber);box-shadow:0 0 6px var(--amber)}
+  .dot.retired{background:var(--red);box-shadow:0 0 6px var(--red)}
+  /* Timeline */
+  .timeline{overflow-x:auto;overflow-y:hidden;white-space:nowrap;padding:20px 10px;position:relative}
+  .tl-track{position:relative;height:60px;min-width:100%}
+  .tl-track::before{content:"";position:absolute;left:0;right:0;top:30px;height:1px;background:#2a2a38}
+  .tl-dot{position:absolute;top:22px;width:16px;height:16px;border-radius:50%;cursor:pointer;transform:translateX(-8px)}
+  .tl-dot:hover{transform:translateX(-8px) scale(1.4)}
+  .tl-dot.ev-task{background:var(--cyan);box-shadow:0 0 6px var(--cyan)}
+  .tl-dot.ev-created{background:var(--green);box-shadow:0 0 8px var(--green)}
+  .tl-dot.ev-evolved{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+  .tl-dot.ev-composed{background:var(--white);box-shadow:0 0 10px var(--white)}
+  .tl-dot.ev-retired{background:var(--red);box-shadow:0 0 8px var(--red)}
+  .tl-tip{position:absolute;background:#000;border:1px solid var(--cyan);padding:4px 8px;font-size:11px;color:var(--cyan);pointer-events:none;z-index:10;white-space:nowrap;display:none}
+  /* Modal */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;z-index:1000}
+  .modal.open{display:flex}
+  .modal-inner{background:var(--bg2);border:1px solid var(--cyan);width:80%;max-width:900px;max-height:80vh;display:flex;flex-direction:column;box-shadow:0 0 40px rgba(0,245,255,0.4)}
+  .modal-inner h3{padding:10px 14px;color:var(--cyan);border-bottom:1px solid var(--dim);font-size:14px;display:flex;justify-content:space-between;align-items:center}
+  .modal-inner .close{cursor:pointer;color:var(--red)}
+  .modal-inner pre{flex:1;overflow:auto;margin:0;padding:12px;font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--green);background:#05050a;white-space:pre-wrap;word-break:break-word}
+  .modal-inner .vers{padding:8px 14px;border-top:1px solid var(--dim);font-size:11px;color:#6a6a80;max-height:120px;overflow:auto}
+  .placeholder{display:flex;align-items:center;justify-content:center;height:100%;color:#3a3a50;font-family:'Rajdhani',sans-serif;letter-spacing:3px;font-size:18px}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat"><span class="lbl">Total Tasks</span><span class="val" id="st-tasks">0</span></div>
+    <div class="stat"><span class="lbl">Verified</span><span class="val" id="st-verified">0</span></div>
+    <div class="stat"><span class="lbl">Evolved</span><span class="val" id="st-evolved">0</span></div>
+    <div class="stat"><span class="lbl">Composed</span><span class="val" id="st-composed">0</span></div>
+    <div class="stat"><span class="lbl">Retired</span><span class="val" id="st-retired">0</span></div>
+    <div class="stat"><span class="lbl">Avg Decay</span><span class="val" id="st-decay">0.00</span></div>
+    <div class="ctrls">
+      <button class="btn" id="btn-replay">REPLAY</button>
+      <button class="btn" id="btn-refresh">AUTO-REFRESH</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="panel feed">
+      <h2>ACTIVITY FEED</h2>
+      <div class="body" id="feed-body"><div class="placeholder">AWAITING FIRST TRANSMISSION</div></div>
+    </div>
+    <div class="panel terrain-wrap">
+      <h2>SKILL TERRAIN MAP</h2>
+      <div class="body"><canvas id="terrain"></canvas><div class="overlay-tip">click a tower</div></div>
+    </div>
+    <div class="panel">
+      <h2>SKILL REGISTRY</h2>
+      <div class="body" id="reg-body"><div class="placeholder">NO SKILLS COMPILED YET</div></div>
+    </div>
+  </div>
+
+  <!-- TIMELINE -->
+  <div class="panel">
+    <h2>EVOLUTION TIMELINE</h2>
+    <div class="body timeline" id="tl-body"><div class="tl-track" id="tl-track"></div><div class="tl-tip" id="tl-tip"></div></div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal" id="modal">
+  <div class="modal-inner">
+    <h3><span id="mod-title">SKILL</span><span class="close" id="mod-close">[X] CLOSE</span></h3>
+    <pre id="mod-code">// loading...</pre>
+    <div class="vers" id="mod-vers"></div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   PERLIN NOISE (Ken Perlin's improved noise, compact)
+   ===================================================================== */
+const Perlin = (function(){
+  const p = new Uint8Array(512);
+  const perm = [151,160,137,91,90,15,131,13,201,95,96,53,194,233,7,225,140,36,103,30,69,142,
+    8,99,37,240,21,10,23,190,6,148,247,120,234,75,0,26,197,62,94,252,219,203,117,35,11,32,57,
+    177,33,88,237,149,56,87,174,20,125,136,171,168,68,175,74,165,71,134,139,48,27,166,77,146,
+    158,231,83,111,229,122,60,211,133,230,220,105,92,41,55,46,245,40,244,102,143,54,65,25,63,
+    161,1,216,80,73,209,76,132,187,208,89,18,169,200,196,135,130,116,188,159,86,164,100,109,
+    198,173,186,3,64,52,217,226,250,124,123,5,202,38,147,118,126,255,82,85,212,207,206,59,227,
+    47,16,58,17,182,189,28,42,223,183,170,213,119,248,152,2,44,154,163,70,221,153,101,155,167,
+    43,172,9,129,22,39,253,19,98,108,110,79,113,224,232,178,185,112,104,218,246,97,228,251,34,
+    242,193,238,210,144,12,191,179,162,241,81,51,145,235,249,14,239,107,49,192,214,31,181,199,
+    106,157,184,84,204,176,115,121,50,45,127,4,150,254,138,236,205,93,222,114,67,29,24,72,243,
+    141,128,195,78,66,215,61,156,180];
+  for(let i=0;i<256;i++){p[i]=perm[i];p[i+256]=perm[i];}
+  function fade(t){return t*t*t*(t*(t*6-15)+10);}
+  function lerp(a,b,t){return a+t*(b-a);}
+  function grad(h,x,y,z){
+    h&=15;
+    const u=h<8?x:y;
+    const v=h<4?y:(h===12||h===14?x:z);
+    return ((h&1)===0?u:-u)+((h&2)===0?v:-v);
+  }
+  function noise(x,y,z){
+    z=z||0;
+    const X=Math.floor(x)&255,Y=Math.floor(y)&255,Z=Math.floor(z)&255;
+    x-=Math.floor(x);y-=Math.floor(y);z-=Math.floor(z);
+    const u=fade(x),v=fade(y),w=fade(z);
+    const A=p[X]+Y,AA=p[A]+Z,AB=p[A+1]+Z;
+    const B=p[X+1]+Y,BA=p[B]+Z,BB=p[B+1]+Z;
+    return lerp(
+      lerp(lerp(grad(p[AA],x,y,z),grad(p[BA],x-1,y,z),u),
+           lerp(grad(p[AB],x,y-1,z),grad(p[BB],x-1,y-1,z),u),v),
+      lerp(lerp(grad(p[AA+1],x,y,z-1),grad(p[BA+1],x-1,y,z-1),u),
+           lerp(grad(p[AB+1],x,y-1,z-1),grad(p[BB+1],x-1,y-1,z-1),u),v),
+      w);
+  }
+  return {noise};
+})();
+
+/* =====================================================================
+   STATE
+   ===================================================================== */
+const STATE = {
+  logs: [],
+  skills: {},      // name -> {name, file, version, success, fail, verified, last_used, tags, state, pos, code}
+  compositions: [],// [{a,b}]
+  timeline: [],    // events
+  selected: null,
+  replay: null,
+  autoRefresh: false,
+  refreshTimer: null,
+  particles: [],
+  probe: {x:0,y:0,tx:0,ty:0},
+  t: 0,
+};
+
+/* =====================================================================
+   UTIL
+   ===================================================================== */
+function hashStr(s){
+  let h=2166136261>>>0;
+  for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619);}
+  return h>>>0;
+}
+function skillPos(name, w, h){
+  const ha = hashStr(name);
+  const hb = hashStr(name+'_y');
+  const x = 60 + (ha % (w-120));
+  const y = 60 + (hb % (h-120));
+  return {x,y};
+}
+function fmtTime(ts){
+  try{const d=new Date(ts);return d.toTimeString().slice(0,8);}catch(e){return '--:--:--';}
+}
+function daysSince(ts){
+  if(!ts) return 999;
+  const d=new Date(ts).getTime();
+  if(isNaN(d)) return 999;
+  return (Date.now()-d)/86400000;
+}
+function decayScore(sk){
+  const sc=sk.success||0;
+  const days=daysSince(sk.last_used);
+  return sc/(1+days*0.1);
+}
+function skillState(sk){
+  const rel=decayScore(sk);
+  const days=daysSince(sk.last_used);
+  if(sk.retired||sk.fail>sk.success*2) return 'retired';
+  if(days<0.5) return 'active';
+  if(rel<0.5&&days>7) return 'decaying';
+  if(sk.verified) return 'verified';
+  return 'decaying';
+}
+function stateColor(s){
+  return {verified:'#00f5ff',active:'#39ff14',decaying:'#ff8c00',retired:'#ff2d55',composing:'#ffffff'}[s]||'#00f5ff';
+}
+
+/* =====================================================================
+   DATA LOADING
+   ===================================================================== */
+async function loadLogs(){
+  try{
+    const r=await fetch('../logs/log.jsonl?_='+Date.now());
+    if(!r.ok) return [];
+    const t=await r.text();
+    return t.split('\n').filter(l=>l.trim()).map(l=>{try{return JSON.parse(l);}catch(e){return null;}}).filter(Boolean);
+  }catch(e){console.warn('no logs',e);return [];}
+}
+async function loadSkillIndex(){
+  try{
+    const r=await fetch('../skills_py/index.json?_='+Date.now());
+    if(!r.ok) return null;
+    return await r.json();
+  }catch(e){return null;}
+}
+async function loadSkillFile(fname){
+  try{
+    const r=await fetch('../skills_py/'+fname+'?_='+Date.now());
+    if(!r.ok) return null;
+    return await r.text();
+  }catch(e){return null;}
+}
+async function loadSkillArchive(fname){
+  try{
+    const r=await fetch('../skills_py/archive/'+fname+'?_='+Date.now());
+    if(!r.ok) return null;
+    return await r.text();
+  }catch(e){return null;}
+}
+
+function parseSkillMeta(code, fname){
+  const meta={name:fname.replace(/\.py$/,''),file:fname,version:1,tags:[],success:0,fail:0,verified:false,last_used:null};
+  const lines=code.split('\n').slice(0,30);
+  for(const line of lines){
+    const m=line.match(/^#\s*(\w+)\s*:\s*(.*)$/);
+    if(!m) continue;
+    const k=m[1].toLowerCase(),v=m[2].trim();
+    if(k==='skill') meta.name=v;
+    else if(k==='version') meta.version=parseInt(v)||1;
+    else if(k==='tags') meta.tags=v.split(',').map(s=>s.trim()).filter(Boolean);
+    else if(k==='success_count') meta.success=parseInt(v)||0;
+    else if(k==='fail_count') meta.fail=parseInt(v)||0;
+    else if(k==='verified') meta.verified=/true/i.test(v);
+    else if(k==='last_used') meta.last_used=v;
+  }
+  return meta;
+}
+
+async function loadAll(){
+  const logs=await loadLogs();
+  STATE.logs=logs;
+  console.log('[dash] logs:',logs);
+
+  const idx=await loadSkillIndex();
+  console.log('[dash] skill index:',idx);
+  const skills={};
+  if(Array.isArray(idx)){
+    for(const fname of idx){
+      const code=await loadSkillFile(fname);
+      if(code){
+        const m=parseSkillMeta(code,fname);
+        m.code=code;
+        skills[m.name]=m;
+      }
+    }
+  }
+  // fall back / augment from log.skill_written
+  for(const l of logs){
+    if(l.skill_written){
+      const nm=typeof l.skill_written==='string'?l.skill_written:(l.skill_written.name||'unknown');
+      if(!skills[nm]){
+        skills[nm]={name:nm,file:nm+'.py',version:l.skill_version||1,tags:[],success:0,fail:0,verified:!!l.skill_verified,last_used:l.timestamp,code:null};
+      }
+    }
+    if(Array.isArray(l.skills_used)){
+      for(const s of l.skills_used){
+        if(!skills[s]) skills[s]={name:s,file:s+'.py',version:1,tags:[],success:0,fail:0,verified:false,last_used:l.timestamp,code:null};
+        skills[s].success=(skills[s].success||0)+1;
+        skills[s].last_used=l.timestamp;
+      }
+    }
+    if(l.skill_verify_failed){
+      const nm=l.skill_written&&(typeof l.skill_written==='string'?l.skill_written:l.skill_written.name);
+      if(nm&&skills[nm]) skills[nm].fail=(skills[nm].fail||0)+1;
+    }
+  }
+  // compute state + position
+  const canvas=document.getElementById('terrain');
+  const w=canvas.width||canvas.clientWidth||800;
+  const h=canvas.height||canvas.clientHeight||400;
+  for(const k in skills){
+    const s=skills[k];
+    s.pos=skillPos(s.name,w,h);
+    s.state=skillState(s);
+    s.decay=decayScore(s);
+  }
+  STATE.skills=skills;
+  console.log('[dash] skills:',skills);
+
+  // compositions
+  const comps=[];
+  const tl=[];
+  for(const l of logs){
+    const ts=l.timestamp||'';
+    if(l.skill_composed&&Array.isArray(l.skills_used)&&l.skills_used.length>=2){
+      for(let i=0;i<l.skills_used.length-1;i++){
+        comps.push({a:l.skills_used[i],b:l.skills_used[i+1],ts});
+      }
+      tl.push({type:'composed',ts,skill:l.skills_used[0],label:'COMPOSED '+l.skills_used.join('+')});
+    }
+    if(l.skill_written) tl.push({type:'created',ts,skill:typeof l.skill_written==='string'?l.skill_written:(l.skill_written.name||'skill'),label:'CREATED'});
+    if(l.skill_evolved) tl.push({type:'evolved',ts,skill:(l.skills_used&&l.skills_used[0])||'skill',label:'EVOLVED v'+(l.skill_version||'?')});
+    if(l.outcome) tl.push({type:'task',ts,skill:(l.skills_used&&l.skills_used[0])||null,label:(l.task||'task').slice(0,40)+' → '+l.outcome});
+  }
+  for(const k in skills){
+    if(skills[k].state==='retired') tl.push({type:'retired',ts:skills[k].last_used||'',skill:k,label:'RETIRED '+k});
+  }
+  STATE.compositions=comps;
+  STATE.timeline=tl.sort((a,b)=>(a.ts||'').localeCompare(b.ts||''));
+
+  renderAll();
+}
+
+/* =====================================================================
+   RENDER
+   ===================================================================== */
+function renderStats(){
+  const logs=STATE.logs;
+  const sk=Object.values(STATE.skills);
+  document.getElementById('st-tasks').textContent=logs.length;
+  document.getElementById('st-verified').textContent=sk.filter(s=>s.verified).length;
+  document.getElementById('st-evolved').textContent=logs.filter(l=>l.skill_evolved).length;
+  document.getElementById('st-composed').textContent=logs.filter(l=>l.skill_composed).length;
+  document.getElementById('st-retired').textContent=sk.filter(s=>s.state==='retired').length;
+  const avg=sk.length?sk.reduce((a,s)=>a+(s.decay||0),0)/sk.length:0;
+  document.getElementById('st-decay').textContent=avg.toFixed(2);
+}
+function renderFeed(){
+  const body=document.getElementById('feed-body');
+  const logs=STATE.logs.slice(-20).reverse();
+  if(!logs.length){body.innerHTML='<div class="placeholder">AWAITING FIRST TRANSMISSION</div>';return;}
+  body.innerHTML=logs.map(l=>{
+    const ok=(l.outcome||'').toLowerCase().includes('success')||(l.outcome||'').toLowerCase().includes('ok');
+    const cls=ok?'ok':((l.outcome||'').toLowerCase().includes('fail')?'fail':'ok');
+    const task=(l.task||'(untitled)').slice(0,40);
+    const sks=(l.skills_used||[]).join(',')||'-';
+    return `<div class="feed-line"><span class="t">[${fmtTime(l.timestamp)}]</span> <span class="task">${escapeHtml(task)}</span> <span class="arrow">→</span> <span class="${cls}">${escapeHtml(l.outcome||'?')}</span> <span class="arrow">→</span> <span class="sk">${escapeHtml(sks)}</span></div>`;
+  }).join('');
+}
+function escapeHtml(s){return String(s).replace(/[&<>"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function renderRegistry(){
+  const body=document.getElementById('reg-body');
+  const sk=Object.values(STATE.skills);
+  if(!sk.length){body.innerHTML='<div class="placeholder">NO SKILLS COMPILED YET</div>';return;}
+  sk.sort((a,b)=>(b.decay||0)-(a.decay||0));
+  body.innerHTML=sk.map(s=>`
+    <div class="skill-row${STATE.selected===s.name?' hl':''}" data-name="${escapeHtml(s.name)}">
+      <div><span class="dot ${s.state}"></span><span class="name">${escapeHtml(s.name)}</span> <span style="color:#6a6a80">v${s.version}</span></div>
+      <div class="meta">ok:${s.success} fail:${s.fail} decay:${(s.decay||0).toFixed(2)} ${s.verified?'✓':'·'}</div>
+    </div>`).join('');
+  body.querySelectorAll('.skill-row').forEach(el=>{
+    el.onclick=()=>openSkill(el.dataset.name);
+  });
+}
+function renderTimeline(){
+  const track=document.getElementById('tl-track');
+  const tl=STATE.timeline;
+  if(!tl.length){track.innerHTML='<div class="placeholder" style="height:60px">NO EVENTS</div>';return;}
+  const w=Math.max(track.clientWidth,tl.length*18);
+  track.style.width=w+'px';
+  const n=tl.length;
+  track.innerHTML=tl.map((e,i)=>{
+    const x=n===1?w/2:(i/(n-1))*(w-20)+10;
+    return `<div class="tl-dot ev-${e.type}" style="left:${x}px" data-i="${i}" title="${escapeHtml(e.label)}"></div>`;
+  }).join('');
+  const tip=document.getElementById('tl-tip');
+  track.querySelectorAll('.tl-dot').forEach(d=>{
+    d.onmouseenter=()=>{const e=tl[+d.dataset.i];tip.textContent=`[${fmtTime(e.ts)}] ${e.label}`;tip.style.display='block';tip.style.left=(parseInt(d.style.left)+10)+'px';tip.style.top='0px';};
+    d.onmouseleave=()=>tip.style.display='none';
+    d.onclick=()=>{const e=tl[+d.dataset.i];if(e.skill){STATE.selected=e.skill;renderRegistry();pulseSkill(e.skill);}};
+  });
+}
+function renderAll(){renderStats();renderFeed();renderRegistry();renderTimeline();resizeCanvas();}
+
+/* =====================================================================
+   CANVAS / TERRAIN
+   ===================================================================== */
+const canvas=document.getElementById('terrain');
+const ctx=canvas.getContext('2d');
+function resizeCanvas(){
+  const r=canvas.parentElement.getBoundingClientRect();
+  canvas.width=r.width;canvas.height=r.height;
+  // recompute positions for current width
+  for(const k in STATE.skills){
+    STATE.skills[k].pos=skillPos(k,canvas.width,canvas.height);
+  }
+}
+window.addEventListener('resize',()=>{resizeCanvas();});
+
+function drawTerrain(){
+  const w=canvas.width,h=canvas.height;
+  // background noise
+  ctx.fillStyle='#0a0a0f';
+  ctx.fillRect(0,0,w,h);
+  const cell=24;
+  for(let y=0;y<h;y+=cell){
+    for(let x=0;x<w;x+=cell){
+      const n=Perlin.noise(x*0.008,y*0.008,STATE.t*0.0003);
+      const v=Math.floor((n+1)*20);
+      ctx.fillStyle=`rgba(0,${40+v},${60+v*2},0.25)`;
+      ctx.fillRect(x,y,cell,cell);
+    }
+  }
+  // grid
+  ctx.strokeStyle='rgba(0,245,255,0.06)';
+  ctx.lineWidth=1;
+  for(let x=0;x<w;x+=40){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,h);ctx.stroke();}
+  for(let y=0;y<h;y+=40){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(w,y);ctx.stroke();}
+
+  // composition links
+  for(const c of STATE.compositions){
+    const a=STATE.skills[c.a],b=STATE.skills[c.b];
+    if(!a||!b) continue;
+    ctx.strokeStyle='rgba(255,255,255,0.25)';
+    ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(a.pos.x,a.pos.y);ctx.lineTo(b.pos.x,b.pos.y);ctx.stroke();
+  }
+  // particles along links
+  for(const p of STATE.particles){
+    ctx.fillStyle='rgba(255,255,255,0.9)';
+    ctx.beginPath();ctx.arc(p.x,p.y,2,0,Math.PI*2);ctx.fill();
+  }
+
+  // skill towers
+  for(const k in STATE.skills){
+    const s=STATE.skills[k];
+    const {x,y}=s.pos;
+    const hh=Math.min(80,10+(s.success||0)*6);
+    const col=stateColor(s.state);
+    const pulseSpeed=s.state==='active'?0.008:0.003;
+    const pulse=0.6+0.4*Math.sin(STATE.t*pulseSpeed+hashStr(k)%100);
+    // base
+    ctx.fillStyle=col;
+    ctx.globalAlpha=0.15*pulse;
+    ctx.beginPath();ctx.arc(x,y,hh*0.6,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;
+    // tower
+    const grd=ctx.createLinearGradient(x,y,x,y-hh);
+    grd.addColorStop(0,col);
+    grd.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=grd;
+    ctx.fillRect(x-3,y-hh,6,hh);
+    // top glow
+    ctx.fillStyle=col;
+    ctx.globalAlpha=pulse;
+    ctx.beginPath();ctx.arc(x,y-hh,3+pulse*2,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;
+    // selected
+    if(STATE.selected===k){
+      ctx.strokeStyle='#ffffff';
+      ctx.lineWidth=2;
+      ctx.beginPath();ctx.arc(x,y,18+Math.sin(STATE.t*0.01)*3,0,Math.PI*2);ctx.stroke();
+    }
+    // label
+    ctx.fillStyle='rgba(200,200,216,0.7)';
+    ctx.font='10px "Share Tech Mono", monospace';
+    ctx.textAlign='center';
+    ctx.fillText(k.slice(0,14),x,y+14);
+  }
+
+  // probe (current task cursor)
+  const probe=STATE.probe;
+  probe.x+=(probe.tx-probe.x)*0.08;
+  probe.y+=(probe.ty-probe.y)*0.08;
+  ctx.strokeStyle='#ffffff';
+  ctx.lineWidth=1;
+  ctx.beginPath();ctx.arc(probe.x,probe.y,12+Math.sin(STATE.t*0.02)*3,0,Math.PI*2);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(probe.x-18,probe.y);ctx.lineTo(probe.x+18,probe.y);
+  ctx.moveTo(probe.x,probe.y-18);ctx.lineTo(probe.x,probe.y+18);ctx.stroke();
+}
+
+function updateParticles(){
+  // spawn particles along compositions
+  if(STATE.t%6===0){
+    for(const c of STATE.compositions){
+      const a=STATE.skills[c.a],b=STATE.skills[c.b];
+      if(!a||!b) continue;
+      STATE.particles.push({x:a.pos.x,y:a.pos.y,tx:b.pos.x,ty:b.pos.y,p:0});
+    }
+  }
+  STATE.particles=STATE.particles.filter(p=>{
+    p.p+=0.02;
+    p.x=p.x+(p.tx-p.x)*0.05;
+    p.y=p.y+(p.ty-p.y)*0.05;
+    return p.p<1;
+  });
+}
+
+function setProbeToLatest(){
+  const last=STATE.logs[STATE.logs.length-1];
+  if(!last||!last.skills_used||!last.skills_used.length) return;
+  const s=STATE.skills[last.skills_used[0]];
+  if(!s) return;
+  STATE.probe.tx=s.pos.x;STATE.probe.ty=s.pos.y;
+  if(STATE.probe.x===0){STATE.probe.x=s.pos.x;STATE.probe.y=s.pos.y;}
+}
+
+function loop(){
+  STATE.t++;
+  updateParticles();
+  if(STATE.replay) stepReplay();
+  else setProbeToLatest();
+  drawTerrain();
+  requestAnimationFrame(loop);
+}
+
+/* =====================================================================
+   CLICK ON CANVAS
+   ===================================================================== */
+canvas.addEventListener('click',e=>{
+  const r=canvas.getBoundingClientRect();
+  const mx=e.clientX-r.left,my=e.clientY-r.top;
+  let hit=null,best=20;
+  for(const k in STATE.skills){
+    const s=STATE.skills[k];
+    const d=Math.hypot(s.pos.x-mx,s.pos.y-my);
+    if(d<best){best=d;hit=k;}
+  }
+  if(hit) openSkill(hit);
+});
+
+/* =====================================================================
+   MODAL
+   ===================================================================== */
+async function openSkill(name){
+  const s=STATE.skills[name];
+  if(!s) return;
+  STATE.selected=name;
+  renderRegistry();
+  document.getElementById('mod-title').textContent=name.toUpperCase()+' :: v'+s.version;
+  const pre=document.getElementById('mod-code');
+  pre.textContent=s.code||'// fetching...';
+  if(!s.code){
+    const code=await loadSkillFile(s.file);
+    s.code=code||'// (no source found)';
+    pre.textContent=s.code;
+  }
+  const vers=document.getElementById('mod-vers');
+  vers.textContent='loading version history...';
+  const arch=await loadSkillArchive(s.file);
+  if(arch){
+    vers.textContent='ARCHIVED:\n'+arch.slice(0,500);
+  }else{
+    vers.textContent='current version: '+s.version+' | no archived versions found';
+  }
+  document.getElementById('modal').classList.add('open');
+}
+document.getElementById('mod-close').onclick=()=>document.getElementById('modal').classList.remove('open');
+document.getElementById('modal').addEventListener('click',e=>{if(e.target.id==='modal')e.currentTarget.classList.remove('open');});
+
+function pulseSkill(name){
+  STATE.selected=name;
+  const s=STATE.skills[name];
+  if(s){STATE.probe.tx=s.pos.x;STATE.probe.ty=s.pos.y;}
+  renderRegistry();
+}
+
+/* =====================================================================
+   REPLAY
+   ===================================================================== */
+document.getElementById('btn-replay').onclick=()=>{
+  STATE.replay={i:0,tick:0};
+};
+function stepReplay(){
+  const r=STATE.replay;
+  r.tick++;
+  if(r.tick<15) return;
+  r.tick=0;
+  if(r.i>=STATE.logs.length){STATE.replay=null;return;}
+  const l=STATE.logs[r.i++];
+  if(l.skills_used&&l.skills_used[0]){
+    const s=STATE.skills[l.skills_used[0]];
+    if(s){STATE.probe.tx=s.pos.x;STATE.probe.ty=s.pos.y;s.success=(s.success||0);}
+  }
+}
+
+/* =====================================================================
+   AUTO-REFRESH
+   ===================================================================== */
+document.getElementById('btn-refresh').onclick=function(){
+  STATE.autoRefresh=!STATE.autoRefresh;
+  this.classList.toggle('on',STATE.autoRefresh);
+  if(STATE.autoRefresh){
+    STATE.refreshTimer=setInterval(loadAll,30000);
+  }else{
+    clearInterval(STATE.refreshTimer);
+  }
+};
+
+/* =====================================================================
+   BOOT
+   ===================================================================== */
+resizeCanvas();
+loadAll().then(()=>{resizeCanvas();});
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

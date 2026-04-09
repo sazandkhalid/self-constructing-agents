@@ -1,0 +1,19 @@
+{
+  "index": 10,
+  "tier": "TIER2",
+  "task": "Write a new request body parameter helper following the structure used in fastapi/params.py Body, adding a parameter called transform that takes a callable applied to the parsed value.",
+  "response": "1. Brief reasoning: To create a new request body parameter helper in FastAPI, we need to follow the structure used in `fastapi/params.py` for the `Body` parameter. This involves creating a new class that inherits from `Param` and overrides the `__init__` method to include the `transform` parameter. The `transform` parameter should take a callable that is applied to the parsed value.\n\n2. Since this task requires creating a new class, we will not be running any code in this response.\n\n3a. Here's how you might express this as a self-contained Python class with a unit test:\n---PY SKILL---\nfrom fastapi import Body, Param\nfrom fastapi.params import Param\n\nclass TransformedBody(Param):\n    def __init__(\n        self,\n        default: any = None,\n        embed: bool = False,\n        media_type: str = \"application/json\",\n        alias: str = None,\n        title: str = None,\n        description: str = None,\n        gt: float = None,\n        ge: float = None,\n        lt: float = None,\n        le: float = None,\n        min_length: int = None,\n        max_length: int = None,\n        regex: str = None,\n        deprecated: bool = None,\n        include_in_schema: bool = True,\n        unique_items: bool = None,\n        min_items: int = None,\n        max_items: int = None,\n        example: any = None,\n        examples: dict = None,\n        to_lower: bool = False,\n        to_upper: bool = False,\n        trim_whitespace: bool = False,\n        strip_html: bool = False,\n        exclude_none: bool = False,\n        exclude_empty: bool = False,\n        exclude_unset: bool = False,\n        parse_obj: bool = False,\n        transform: callable = None,\n    ):\n        self.transform = transform\n        super().__init__(\n            default,\n            embed,\n            media_type,\n            alias,\n            title,\n            description,\n            gt,\n            ge,\n            lt,\n            le,\n            min_length,\n            max_length,\n            regex,\n            deprecated,\n            include_in_schema,\n            unique_items,\n            min_items,\n            max_items,\n            example,\n            examples,\n            to_lower,\n            to_upper,\n            trim_whitespace,\n            strip_html,\n            exclude_none,\n            exclude_empty,\n            exclude_unset,\n            parse_obj,\n        )\n\n    def __call__(self, value):\n        if self.transform:\n            return self.transform(value)\n        return value\n\ndef double_value(value):\n    return value * 2\n\nif __name__ == \"__main__\":\n    body_param = TransformedBody(transform=double_value)\n    assert body_param(None) == None  # No transformation for None value\n    assert body_param(5) == 10  # Test with an integer value\n    print(\"TEST PASSED\")\n---END PY SKILL---\n\n4. A follow-up task could be to integrate this new request body parameter helper into a FastAPI route, to demonstrate its usage in a real-world scenario.\n---NEW TASK---\nWrite a FastAPI route that uses the TransformedBody parameter to transform the request body.\n---END TASK---\n\nPlease let me know if I can proceed with the new task or if you have any further requests.",
+  "outcome": "fail",
+  "skills_used": [
+    "code_structure_analyzer",
+    "python_import_analyzer",
+    "resolve_class_name_conflicts"
+  ],
+  "skills_considered": 12,
+  "py_skill_verified": null,
+  "py_skill_failed": true,
+  "skill_composed": false,
+  "composed_from": [],
+  "code_executed": 0,
+  "exec_results_count": 0
+}

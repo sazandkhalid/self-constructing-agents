@@ -1,0 +1,6 @@
+self_building_agent/.env
+self_building_agent/venv/
+**/__pycache__/
+self_building_agent/eval/target_repo/
+self_building_agent/eval/backups/
+self_building_agent/eval/__pycache__/

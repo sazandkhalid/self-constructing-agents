@@ -1,0 +1,99 @@
+{
+  "cold": [
+    {
+      "tier": "TIER1",
+      "task": "List every module inside fastapi/ that imports from starlette and report which starlette names each one imports.",
+      "score": 3,
+      "judge_score": 2,
+      "exec_ok": false,
+      "refs_real_files": true,
+      "used_verified_skill": false,
+      "reasoning": "The agent's answer is correct, specific, and grounded in the real FastAPI structure, providing a clear list of modules that import from Starlette along with the imported names.",
+      "py_skill_verified": null,
+      "skill_composed": false
+    },
+    {
+      "tier": "TIER2",
+      "task": "Write a new APIRoute subclass that follows the constructor signature and attribute conventions used in fastapi/routing.py APIRoute, adding a single new attribute called custom_tag.",
+      "score": 3,
+      "judge_score": 2,
+      "exec_ok": false,
+      "refs_real_files": true,
+      "used_verified_skill": false,
+      "reasoning": "The agent's answer is correct, specific, and grounded in real FastAPI structure, as it accurately creates a new APIRoute subclass with the required custom attribute.",
+      "py_skill_verified": null,
+      "skill_composed": false
+    },
+    {
+      "tier": "TIER3",
+      "task": "Find a code pattern that is repeated across at least three files in fastapi/ and write a verified Python skill that abstracts it. Cite the three source files.",
+      "score": 2,
+      "judge_score": 1,
+      "exec_ok": false,
+      "refs_real_files": true,
+      "used_verified_skill": false,
+      "reasoning": "The agent's answer identifies relevant source files and proposes a potential abstraction, but it does not provide a clear and concrete example of the repeated code pattern or the abstracted Python skill.",
+      "py_skill_verified": null,
+      "skill_composed": false
+    }
+  ],
+  "warm": [
+    {
+      "tier": "TIER1",
+      "task": "List every module inside fastapi/ that imports from starlette and report which starlette names each one imports.",
+      "score": 3,
+      "judge_score": 2,
+      "exec_ok": false,
+      "refs_real_files": true,
+      "used_verified_skill": true,
+      "reasoning": "The agent's answer is correct, specific, and grounded in real FastAPI structure, providing a detailed explanation and a Python function to find Starlette imports in the FastAPI repository.",
+      "py_skill_verified": "find_starlette_imports",
+      "skill_composed": false
+    },
+    {
+      "tier": "TIER2",
+      "task": "Write a new APIRoute subclass that follows the constructor signature and attribute conventions used in fastapi/routing.py APIRoute, adding a single new attribute called custom_tag.",
+      "score": 3,
+      "judge_score": 2,
+      "exec_ok": false,
+      "refs_real_files": true,
+      "used_verified_skill": false,
+      "reasoning": "The agent provided a correct and specific solution by creating a new APIRoute subclass with a custom attribute, following the constructor signature and attribute conventions used in fastapi/routing.py APIRoute.",
+      "py_skill_verified": null,
+      "skill_composed": false
+    },
+    {
+      "tier": "TIER3",
+      "task": "Find a code pattern that is repeated across at least three files in fastapi/ and write a verified Python skill that abstracts it. Cite the three source files.",
+      "score": 3,
+      "judge_score": 2,
+      "exec_ok": false,
+      "refs_real_files": true,
+      "used_verified_skill": true,
+      "reasoning": "The agent's answer correctly identifies a repeated code pattern in the FastAPI repository, abstracts it into a verified Python skill, and cites relevant source files.",
+      "py_skill_verified": "get_type_hints",
+      "skill_composed": false
+    }
+  ],
+  "summary": {
+    "cold_avg": 2.667,
+    "warm_avg": 3.0,
+    "improvement_pct": 12.5,
+    "tier1_delta": 0.0,
+    "tier2_delta": 0.0,
+    "tier3_delta": 1.0,
+    "cold_by_tier": {
+      "TIER1": 3.0,
+      "TIER2": 3.0,
+      "TIER3": 2.0
+    },
+    "warm_by_tier": {
+      "TIER1": 3.0,
+      "TIER2": 3.0,
+      "TIER3": 3.0
+    },
+    "skills_used_in_warm": 2,
+    "compositions": 0,
+    "skills_built_during_exploration": 2
+  }
+}

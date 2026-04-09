@@ -1,11 +1,17 @@
 ---
 name: llm_cache_decorator
-tags: [caching, llm, api, performance, decorator, python]
+tags:
+- caching
+- llm
+- api
+- performance
+- decorator
+- python
 trigger: task involves caching LLM responses or avoiding repeated API calls
 type: pattern
 version: 1
 success_count: 0
-fail_count: 0
+fail_count: 1
 ---
 # LLM Cache Decorator
 ## Purpose

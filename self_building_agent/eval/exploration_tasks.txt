@@ -1,0 +1,20 @@
+Explore fastapi/routing.py and extract the APIRoute construction pattern as a reusable skill.
+Map how fastapi/dependencies/utils.py resolves dependency callables and encode it as a verified skill.
+Read fastapi/params.py and write a skill that builds Param subclasses following the same metaclass-free pattern.
+Inspect fastapi/security/ and extract the common scheme __call__ pattern as a skill.
+Walk fastapi/openapi/utils.py and identify how schemas get inlined; encode the inlining helper as a skill.
+Read fastapi/exception_handlers.py and write a skill that constructs JSONResponse error payloads in the same shape.
+Look at fastapi/encoders.py jsonable_encoder and produce a smaller reusable encoder skill following its dispatch style.
+Trace fastapi/applications.py FastAPI.__init__ and list the most common middleware-related attribute names.
+Read fastapi/middleware/__init__.py and produce a skill that re-exports starlette middleware with the fastapi naming convention.
+Examine fastapi/responses.py and write a skill that builds a custom JSONResponse subclass following fastapi's style.
+Inspect fastapi/datastructures.py and extract any utility classes that wrap starlette equivalents.
+Read fastapi/_compat.py and identify how it switches between pydantic v1 and v2; encode the dispatch as a skill.
+Look at fastapi/utils.py and extract any small pure helper as a skill.
+Walk fastapi/routing.py APIRouter.add_api_route and document the parameter ordering as a skill.
+Read fastapi/dependencies/models.py and produce a skill that constructs a Dependant object correctly.
+Examine fastapi/openapi/models.py and identify the base model class used for OpenAPI schemas.
+Read fastapi/security/oauth2.py and extract the OAuth2 flow construction pattern as a skill.
+Look at fastapi/concurrency.py and encode the contextmanager-to-async helper as a reusable skill.
+Inspect fastapi/cli.py and identify how it discovers the FastAPI app object; encode as a skill.
+Read fastapi/applications.py and write a skill that mounts a sub-application following the same conventions.

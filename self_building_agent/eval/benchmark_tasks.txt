@@ -1,0 +1,15 @@
+TIER1::List every module inside fastapi/ that imports from starlette and report which starlette names each one imports.
+TIER1::Find the file that defines the FastAPI class and report the name of its parent class plus the line number of the class definition.
+TIER1::Locate every Python file under fastapi/security/ and for each one report the public class names it defines.
+TIER1::Identify which file in the fastapi package owns the APIRoute class and list the names of its public methods.
+TIER1::List the dependency-injection helper functions defined in fastapi/dependencies/utils.py and give a one-line description of each.
+TIER2::Write a new APIRoute subclass that follows the constructor signature and attribute conventions used in fastapi/routing.py APIRoute, adding a single new attribute called custom_tag.
+TIER2::Write a new Depends-style helper named DependsCached that mirrors the structure of fastapi/param_functions.py Depends but caches its result by argument tuple. Match the existing param_functions.py style.
+TIER2::Write a small FastAPI security scheme class that follows the inheritance and __call__ conventions of fastapi/security/api_key.py APIKeyHeader, but reads from a query parameter instead.
+TIER2::Write a custom exception handler registration following the exact patterns used in fastapi/exception_handlers.py — same function signature shape, same response construction style.
+TIER2::Write a new request body parameter helper following the structure used in fastapi/params.py Body, adding a parameter called transform that takes a callable applied to the parsed value.
+TIER3::Find a code pattern that is repeated across at least three files in fastapi/ and write a verified Python skill that abstracts it. Cite the three source files.
+TIER3::Synthesize how fastapi handles request validation across params.py, dependencies/utils.py, and routing.py and produce a working minimal reproduction in under 60 lines.
+TIER3::Identify how fastapi/openapi/utils.py builds its schema and write a skill that, given a Pydantic model, produces the same schema fragment fastapi would inline into its OpenAPI output.
+TIER3::Spot a place in fastapi/routing.py where the same conditional branch appears in two different methods and propose (with a verified skill) a refactor that unifies them. Cite the line numbers.
+TIER3::Read fastapi/dependencies/utils.py and fastapi/routing.py and write a verified skill named resolve_dependency_chain that, given a list of callable dependencies, returns them in resolution order matching fastapi's actual algorithm.
