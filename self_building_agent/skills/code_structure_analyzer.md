@@ -6,8 +6,8 @@ tags:
 trigger: when analyzing the code structure of a repository
 type: pattern
 version: 1
-success_count: 14
-fail_count: 4
+success_count: 17
+fail_count: 7
 ---
 ---
 # Code Structure Analyzer

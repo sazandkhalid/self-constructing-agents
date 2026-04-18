@@ -1,0 +1,20 @@
+EXPLORE::Write a function get_message_family(msg_type: str) -> str that wraps get_family() from messages.py and returns Unknown instead of raising on unrecognised types. Include a unit test.
+EXPLORE::Write a function is_payment_instruction(msg_type: str) -> bool that returns True for pacs.008, pacs.009, and pain.001. Include a unit test with all three positive cases and one negative case.
+EXPLORE::Write a function format_currency_amount(amount: float, currency: str) -> str that returns a string like USD 1,234.56. Include a unit test with at least three amounts including zero and negative.
+EXPLORE::Write a function make_trace_number(routing_number: str, sequence: int) -> str that returns a 15-digit NACHA trace number: the first 8 digits of the routing number plus a 7-digit zero-padded sequence. Include a unit test.
+EXPLORE::Write a function cents_to_dollars(cents: int) -> float. Include edge case tests for zero and large values.
+EXPLORE::Write a function dollars_to_cents(amount: float) -> int using round-half-up semantics. Include a unit test that confirms 1.005 rounds to 101 cents.
+EXPLORE::Write a function extract_iban_country(iban: str) -> str that returns the 2-letter country code from the start of an IBAN string, or raises ValueError if the string is shorter than 2 characters. Include a unit test.
+EXPLORE::Write a function is_sepa_country(country_code: str) -> bool. Hard-code a set of at least 10 real SEPA member country codes. Include a unit test.
+EXPLORE::Write a function build_end_to_end_id(sender_ref: str, date_str: str) -> str that returns a string in the format SENDER-YYYYMMDD-UUID4[:8]. Include a unit test.
+EXPLORE::Write a function mask_account_number(account: str) -> str that replaces all but the last 4 characters with asterisks. This skill should have audit_required: true in its header. Include a unit test.
+EXPLORE::Write a function parse_booking_date(date_str: str) -> date that handles both YYYY-MM-DD and YYYYMMDD formats. Include a unit test covering both formats and an invalid input.
+EXPLORE::Write a function amount_in_range(amount: float, minimum: float, maximum: float) -> bool. Include boundary tests.
+EXPLORE::Write a function build_pacs008_stub(msg_id: str, amount: float, currency: str, debtor: str, creditor: str) -> str that returns a minimal valid pacs.008 XML string suitable for use with parse_pacs008() in parser.py. Include a round-trip unit test: build then parse, assert fields match.
+EXPLORE::Write a function count_by_status(results: list) -> dict that counts items in a list by their .status attribute. Include a unit test using MatchResult objects from reconciliation.py.
+EXPLORE::Write a function filter_by_rail(entries: list, rail: str) -> list that filters LedgerEntry objects from reconciliation.py by their rail field. Include a unit test.
+EXPLORE::Write a function sum_amounts(entries: list) -> Decimal that sums the amount field of a list of LedgerEntry objects from reconciliation.py. Include a unit test.
+EXPLORE::Write a function validate_iso_country(code: str) -> bool that returns True for any uppercase 2-letter string. Include a unit test with valid, lowercase, and 3-letter inputs.
+EXPLORE::Write a function truncate_name(name: str, max_len: int = 70) -> str that truncates a name to max_len characters and appends ... if truncated. Include a unit test.
+EXPLORE::Write a function detect_rail_from_message_type(msg_type: str) -> str that returns swift_mx for pacs/camt/pain types, nacha for any string starting with ACH, and unknown otherwise. Include a unit test.
+EXPLORE::Write a function group_by_currency(entries: list) -> dict that groups LedgerEntry objects from reconciliation.py by their currency field. Include a unit test with at least two currencies.

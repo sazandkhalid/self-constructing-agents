@@ -7,8 +7,8 @@ tags:
 trigger: when analyzing Python code for imports from specific modules
 type: pattern
 version: 1
-success_count: 15
-fail_count: 4
+success_count: 18
+fail_count: 6
 ---
 ---
 # Python Import Analyzer

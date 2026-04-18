@@ -1,1 +1,59 @@
-["find_starlette_imports.py", "get_type_hints.py", "resolve_dependency_callable.py"]
+[
+  {
+    "file": "extract_message_constants.py",
+    "skill": "extract_message_constants",
+    "version": 1,
+    "tags": [
+      "list",
+      "message",
+      "type",
+      "constants",
+      "defined"
+    ],
+    "verified": true,
+    "protocol": null,
+    "rail": null,
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "format_currency_amount.py",
+    "skill": "format_currency_amount",
+    "version": 1,
+    "tags": [
+      "write",
+      "function",
+      "format_currency_amount",
+      "amount",
+      "float"
+    ],
+    "verified": true,
+    "protocol": null,
+    "rail": null,
+    "audit_required": false,
+    "compliance_warn": "skill accesses financial/PII data without an audit hook",
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "is_payment_instruction.py",
+    "skill": "is_payment_instruction",
+    "version": 1,
+    "tags": [
+      "write",
+      "function",
+      "is_payment_instruction",
+      "msg_type",
+      "bool"
+    ],
+    "verified": true,
+    "protocol": null,
+    "rail": null,
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  }
+]

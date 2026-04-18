@@ -6,7 +6,7 @@ tags:
 trigger: when analyzing imports from a specific module
 type: pattern
 version: 1
-success_count: 6
+success_count: 8
 fail_count: 1
 ---
 ---

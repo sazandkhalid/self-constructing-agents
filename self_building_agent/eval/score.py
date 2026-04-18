@@ -1,5 +1,11 @@
-"""Score cold vs warm results for the experiment."""
-import os, sys, json, re, ast, subprocess, tempfile
+"""Score cold vs warm results for the experiment.
+
+Can be used as a module (imported by run_experiment.py) or as a CLI:
+    python eval/score.py --log logs/run_cold.jsonl --tasks eval/payment_benchmark_tasks.txt \
+        --out eval/scores_cold.json --target-repo eval/target_repo/iso20022_synthetic \
+        --payment-domain
+"""
+import os, sys, json, re, ast, subprocess, tempfile, argparse
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, ROOT)
@@ -7,30 +13,68 @@ sys.path.insert(0, ROOT)
 from groq import Groq
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-TARGET_REPO = os.path.join("eval", "target_repo", "fastapi")
 LOG_FILE = os.path.join("logs", "log.jsonl")
 SKILLS_PY_DIR = "skills_py"
 
-_repo_files_cache = None
+# Payment-domain symbols that confirm the agent read the target repo
+PAYMENT_SYMBOLS = [
+    "PACS_008", "PACS_009", "PACS_002", "CAMT_053", "CAMT_054", "PAIN_001", "PAIN_002",
+    "parse_pacs008", "extract_statement_entries", "validate_routing_number",
+    "match_by_reference", "surface_exceptions", "validate_hybrid_address",
+    "parse_unstructured_address", "build_ach_file", "format_ach_amount",
+    "LedgerEntry", "MatchResult", "CreditTransfer", "HybridAddress", "ACHEntry", "ACHBatch",
+]
 
-def repo_files():
-    global _repo_files_cache
-    if _repo_files_cache is not None:
-        return _repo_files_cache
+_repo_files_cache = {}
+
+def repo_files(target_repo=None):
+    key = target_repo or "__default__"
+    if key in _repo_files_cache:
+        return _repo_files_cache[key]
+    search_root = target_repo or os.path.join("eval", "target_repo", "fastapi")
     files = set()
-    for root, dirs, fns in os.walk(TARGET_REPO):
+    for root, dirs, fns in os.walk(search_root):
         dirs[:] = [d for d in dirs if not d.startswith(".")]
         for fn in fns:
             if fn.endswith(".py"):
-                rel = os.path.relpath(os.path.join(root, fn), TARGET_REPO)
+                rel = os.path.relpath(os.path.join(root, fn), search_root)
                 files.add(rel)
                 files.add(os.path.basename(rel))
-    _repo_files_cache = files
+    _repo_files_cache[key] = files
     return files
 
-def llm_judge(task, response):
-    """Return (0|1|2, reasoning)."""
-    prompt = f"""You are scoring an agent's answer to a task about the FastAPI repository.
+def parse_task_file(path):
+    """Parse a task file into list of (tier, task_text).
+    Supports both TIER1::task and # TIER N: comment-header formats.
+    """
+    tasks = []
+    current_tier = "UNTIERED"
+    for line in open(path):
+        line = line.strip()
+        if not line or line.startswith("##"):
+            continue
+        # Comment-style tier header: # TIER 1: ...
+        m = re.match(r"#\s*TIER\s*(\d+)", line, re.I)
+        if m:
+            current_tier = f"TIER{m.group(1)}"
+            continue
+        if line.startswith("#"):
+            continue
+        # Inline prefix format: TIER1::task or EXPLORE::task
+        if "::" in line:
+            prefix, body = line.split("::", 1)
+            prefix = prefix.strip().upper()
+            if prefix.startswith("TIER"):
+                current_tier = prefix
+            tasks.append((current_tier, body.strip()))
+        else:
+            tasks.append((current_tier, line))
+    return tasks
+
+def llm_judge(task, response, domain="fastapi"):
+    """Return (0|1|2, reasoning). domain affects the rubric framing."""
+    domain_hint = "FastAPI repository" if domain == "fastapi" else "ISO 20022/ACH payment codebase"
+    prompt = f"""You are scoring an agent's answer to a coding task about the {domain_hint}.
 
 TASK: {task}
 
@@ -40,7 +84,7 @@ AGENT ANSWER:
 Score 0, 1, or 2:
 - 0: wrong, irrelevant, hallucinated, or no concrete content
 - 1: partially correct — vague, missing detail, or only partially answers
-- 2: correct, specific, and grounded in real fastapi structure
+- 2: correct, specific, and grounded in real code from the target codebase
 
 Respond with ONLY a JSON object: {{"score": 0|1|2, "reasoning": "one sentence"}}"""
     try:
@@ -82,26 +126,34 @@ def code_executes(response):
         try: os.unlink(path)
         except OSError: pass
 
-def references_real_files(response):
-    files = repo_files()
+def references_real_files(response, target_repo=None):
+    files = repo_files(target_repo)
     text = response or ""
     for f in files:
         if f and f in text:
             return True
-    # Also accept fastapi/<file>.py mentions
-    return bool(re.search(r"fastapi/[\w/]+\.py", text))
+    return bool(re.search(r"[\w/]+\.py", text) and any(f.split("/")[-1] in text for f in files))
+
+def references_payment_symbols(response):
+    """Return True if response mentions any known payment-domain symbol."""
+    text = response or ""
+    return any(sym in text for sym in PAYMENT_SYMBOLS)
 
 def used_verified_skill(result):
     return bool(result.get("py_skill_verified")) or bool(result.get("skill_composed"))
 
-def score_one(tier, task, result):
+def score_one(tier, task, result, target_repo=None, payment_domain=False):
     response = result.get("response", "") or ""
-    judge_score, reasoning = llm_judge(task, response)        # 0..2
-    bonus_exec = 1 if code_executes(response) else 0          # +1
-    bonus_files = 1 if references_real_files(response) else 0  # +1 (we'll cap)
-    bonus_skill = 1 if used_verified_skill(result) else 0     # +1
-    # Cap at 3 as the spec asks for 0-3 range; we squash bonuses
-    raw = judge_score + bonus_exec + bonus_files + bonus_skill
+    domain = "payment" if payment_domain else "fastapi"
+    judge_score, reasoning = llm_judge(task, response, domain=domain)
+    bonus_exec  = 1 if code_executes(response) else 0
+    bonus_files = 1 if references_real_files(response, target_repo) else 0
+    bonus_skill = 1 if used_verified_skill(result) else 0
+    bonus_payment = 0
+    if payment_domain:
+        bonus_payment = 1 if references_payment_symbols(response) else 0
+
+    raw = judge_score + bonus_exec + bonus_files + bonus_skill + bonus_payment
     final = min(3, raw)
     return {
         "tier": tier,
@@ -111,6 +163,7 @@ def score_one(tier, task, result):
         "exec_ok": bool(bonus_exec),
         "refs_real_files": bool(bonus_files),
         "used_verified_skill": bool(bonus_skill),
+        "refs_payment_symbols": bool(bonus_payment),
         "reasoning": reasoning,
         "py_skill_verified": result.get("py_skill_verified"),
         "skill_composed": result.get("skill_composed"),
@@ -130,25 +183,11 @@ def aggregate(scored):
         "by_tier": {t: sum(v)/len(v) for t, v in by_tier.items()},
     }
 
-def count_skill_usage_in_log():
-    if not os.path.exists(LOG_FILE):
-        return 0, 0
-    used = 0
-    composed = 0
-    for line in open(LOG_FILE):
-        try:
-            e = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if e.get("skill_verified"):
-            used += 1
-        if e.get("skill_composed"):
-            composed += 1
-    return used, composed
-
-def score_all(cold_results, warm_results, summary_extra=None, out_path="eval/results/scores.json"):
-    cold_scored = [score_one(t, q, r) for (t, q, r) in cold_results]
-    warm_scored = [score_one(t, q, r) for (t, q, r) in warm_results]
+def score_all(cold_results, warm_results, summary_extra=None,
+              out_path="eval/results/scores.json",
+              target_repo=None, payment_domain=False):
+    cold_scored = [score_one(t, q, r, target_repo, payment_domain) for (t, q, r) in cold_results]
+    warm_scored = [score_one(t, q, r, target_repo, payment_domain) for (t, q, r) in warm_results]
     cold_agg = aggregate(cold_scored)
     warm_agg = aggregate(warm_scored)
 
@@ -182,5 +221,70 @@ def score_all(cold_results, warm_results, summary_extra=None, out_path="eval/res
         json.dump(out, f, indent=2)
     return out
 
+def load_log_results(log_path, task_list):
+    """Load run results from a jsonl log file, aligned to a task list.
+    Returns list of (tier, task, result_dict).
+    """
+    entries = []
+    if os.path.exists(log_path):
+        for line in open(log_path):
+            line = line.strip()
+            if line:
+                try:
+                    entries.append(json.loads(line))
+                except json.JSONDecodeError:
+                    pass
+
+    # Align log entries to task list by task text match
+    results = []
+    used_indices = set()
+    for tier, task in task_list:
+        matched = None
+        for i, e in enumerate(entries):
+            if i not in used_indices and task.lower()[:80] in (e.get("task") or "").lower()[:120]:
+                matched = e
+                used_indices.add(i)
+                break
+        if matched is None:
+            matched = {"task": task, "response": "", "outcome": "no_log"}
+        results.append((tier, task, matched))
+    return results
+
+# ---------------------------------------------------------------------------
+# CLI entry point
+# ---------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser(description="Score a cold or warm agent run")
+    parser.add_argument("--log",          required=True,  help="Path to run log (jsonl)")
+    parser.add_argument("--tasks",        required=True,  help="Path to task file")
+    parser.add_argument("--out",          required=True,  help="Output scores JSON path")
+    parser.add_argument("--target-repo",  default=None,   help="Path to target repo for file-reference check")
+    parser.add_argument("--payment-domain", action="store_true", help="Enable payment-domain scoring bonus")
+    parser.add_argument("--label",        default="run",  help="Label for this run (cold/warm/explore)")
+    args = parser.parse_args()
+
+    os.chdir(ROOT)  # score.py always runs relative to project root
+
+    task_list = parse_task_file(args.tasks)
+    results   = load_log_results(args.log, task_list)
+    scored    = [score_one(t, q, r, args.target_repo, args.payment_domain)
+                 for (t, q, r) in results]
+    agg       = aggregate(scored)
+
+    out = {
+        "label": args.label,
+        "scores": scored,
+        "summary": {
+            "avg": round(agg["avg"], 3),
+            "by_tier": {k: round(v, 3) for k, v in agg["by_tier"].items()},
+            "tasks_scored": len(scored),
+        },
+    }
+    os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
+    with open(args.out, "w") as f:
+        json.dump(out, f, indent=2)
+    print(f"Scored {len(scored)} tasks → avg {agg['avg']:.2f}. Written to {args.out}")
+
 if __name__ == "__main__":
-    print("score.py is invoked from run_experiment.py — nothing to do standalone.")
+    main()

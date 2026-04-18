@@ -285,7 +285,12 @@ print(reverse_string("hello"))
 ```
 ---END EXECUTE---
 
-3a. PREFERRED: if your solution can be expressed as a self-contained Python function with a unit test, emit a PY SKILL block. The test MUST print exactly "TEST PASSED" on success. Example:
+3a. PREFERRED: if your solution can be expressed as a self-contained Python function with a unit test, emit a PY SKILL block. The test MUST print exactly "TEST PASSED" on success.
+For payment-domain skills, include these header fields at the top of the function body (as comments, before the def):
+# protocol: one of iso20022|ach|fedwire|sepa|internal|general
+# rail: one of swift_mx|fednow|rtp|nacha|sepa_ct|on_chain|general
+# audit_required: true if the skill reads or writes party PII or financial amounts
+Example:
 
 ---PY SKILL---
 def reverse_string(s):
@@ -539,7 +544,8 @@ def log_result(**fields):
 # ===========================================================================
 
 PY_SKILL_META_KEYS = ("skill", "version", "tags", "success_count", "fail_count",
-                      "verified", "last_used", "decaying")
+                      "verified", "last_used", "decaying",
+                      "protocol", "rail", "audit_required", "compliance_warn")
 
 def _now_iso():
     return datetime.now(timezone.utc).isoformat()
@@ -563,7 +569,7 @@ def parse_py_skill(filepath):
                         metadata[key] = int(val)
                     except ValueError:
                         metadata[key] = 0
-                elif key in ("verified", "decaying"):
+                elif key in ("verified", "decaying", "audit_required"):
                     metadata[key] = val.lower() == "true"
                 else:
                     metadata[key] = val
@@ -591,18 +597,44 @@ def serialize_py_skill(skill):
         f"# verified: {'true' if m.get('verified') else 'false'}",
         f"# last_used: {m.get('last_used', _now_iso())}",
         f"# decaying: {'true' if m.get('decaying') else 'false'}",
-        "",
     ]
+    for opt in ("protocol", "rail", "audit_required", "compliance_warn"):
+        if m.get(opt) is not None:
+            val = m[opt]
+            if isinstance(val, bool):
+                val = "true" if val else "false"
+            header.append(f"# {opt}: {val}")
+    header.append("")
     return "\n".join(header) + skill["body"].strip() + "\n"
 
 def save_py_skill(skill):
     with open(skill["filepath"], "w") as f:
         f.write(serialize_py_skill(skill))
-    # Maintain skills_py/index.json so dashboard can list files
+    # Maintain skills_py/index.json so dashboard can list files + metadata
     try:
-        idx = sorted(f for f in os.listdir(PY_SKILLS_DIR) if f.endswith(".py"))
+        idx_files = sorted(f for f in os.listdir(PY_SKILLS_DIR) if f.endswith(".py"))
+        idx_meta = []
+        for fn in idx_files:
+            try:
+                s = parse_py_skill(f"{PY_SKILLS_DIR}/{fn}")
+                m = s["metadata"]
+                idx_meta.append({
+                    "file": fn,
+                    "skill": m.get("skill", fn),
+                    "version": m.get("version", 1),
+                    "tags": m.get("tags", []),
+                    "verified": m.get("verified", False),
+                    "protocol": m.get("protocol"),
+                    "rail": m.get("rail"),
+                    "audit_required": m.get("audit_required", False),
+                    "compliance_warn": m.get("compliance_warn"),
+                    "success_count": m.get("success_count", 0),
+                    "fail_count": m.get("fail_count", 0),
+                })
+            except Exception:
+                idx_meta.append({"file": fn})
         with open(f"{PY_SKILLS_DIR}/index.json", "w") as f:
-            json.dump(idx, f)
+            json.dump(idx_meta, f, indent=2)
     except Exception:
         pass
 
@@ -662,23 +694,59 @@ def _infer_tags(code, task):
     return list(dict.fromkeys(w for w in words if len(w) > 3 and w not in stop))[:5]
 
 def materialize_py_skill(code, task=""):
-    """Verify code; if it passes, persist as a new py skill. Returns (status, skill_or_msg)."""
+    """Verify code; if it passes ComplianceShield, persist as a new py skill. Returns (status, skill_or_msg)."""
     name = _infer_skill_name(code)
     filepath = f"{PY_SKILLS_DIR}/{name}.py"
     if os.path.exists(filepath):
         return "duplicate", name
     passed, output = verify_py_skill(code)
+    if not passed:
+        return "failed", output
+
+    # Parse any payment-domain metadata out of the code header comments
+    extra_meta = {}
+    for line in code.splitlines():
+        if not line.startswith("#"):
+            break
+        for key in ("protocol", "rail", "audit_required"):
+            m = re.match(rf"#\s*{key}\s*:\s*(.+)", line)
+            if m:
+                val = m.group(1).strip()
+                extra_meta[key] = val.lower() == "true" if key == "audit_required" else val
+
     metadata = {
         "skill": name, "version": 1, "tags": _infer_tags(code, task),
         "success_count": 0, "fail_count": 0,
-        "verified": passed, "last_used": _now_iso(), "decaying": False,
+        "verified": True, "last_used": _now_iso(), "decaying": False,
+        **extra_meta,
     }
+
+    # ComplianceShield check
+    try:
+        from compliance import check as shield_check, ShieldOutcome
+        shield_result = shield_check(code, metadata)
+        if shield_result.outcome == ShieldOutcome.BLOCK:
+            log_result(
+                task=task, response="", outcome="skill_blocked",
+                skill_written=None, skill_verified=None, skill_verify_failed=True,
+                skills_used=[], skills_considered=0, skill_composed=False,
+                composed_from=[], skill_evolved=False, skill_version=None,
+                code_executed=0, new_tasks_queued=[],
+                failure_type="tool_misuse", recovery_attempted=False,
+                recovery_succeeded=False,
+                compliance_block=True, compliance_reason=shield_result.reason,
+            )
+            print(f"  ✗ ComplianceShield BLOCKED '{name}': {shield_result.reason}")
+            return "blocked", shield_result.reason
+        elif shield_result.outcome == ShieldOutcome.WARN:
+            metadata["compliance_warn"] = shield_result.reason
+            print(f"  ⚠ ComplianceShield WARN '{name}': {shield_result.reason}")
+    except ImportError:
+        pass  # compliance.py not available — skip shield
+
     skill = {"metadata": metadata, "body": code, "filepath": filepath}
-    if passed:
-        save_py_skill(skill)
-        return "verified", skill
-    else:
-        return "failed", output
+    save_py_skill(skill)
+    return "verified", skill
 
 def llm_compile_skill(task, response_summary):
     """Ask the LLM to convert a freeform task solution into a function + test."""
