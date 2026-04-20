@@ -3,6 +3,14 @@ from datetime import datetime, timezone
 from collections import deque
 from groq import Groq
 
+# Optional addons — imported lazily so existing tests keep working if a module
+# hasn't been created yet.
+def _try_import(module):
+    try:
+        return __import__(module)
+    except ImportError:
+        return None
+
 PY_SKILLS_DIR = "skills_py"
 PY_SKILLS_ARCHIVE = "skills_py/archive"
 EPISODES_FILE = "memory/episodes.jsonl"
@@ -38,6 +46,27 @@ def _cosine(a, b):
     na = math.sqrt(sum(x*x for x in a))
     nb = math.sqrt(sum(y*y for y in b))
     return dot / (na * nb) if na and nb else 0.0
+
+def dynamic_top_k(skills: list, relevance_scores: list = None) -> int:
+    """Compute an adaptive top_k based on skill library size and score distribution."""
+    n = len(skills)
+    if n == 0:
+        return 0
+    elif n <= 5:
+        k = min(2, n)
+    elif n <= 15:
+        k = 3
+    elif n <= 30:
+        k = 4
+    else:
+        k = 5
+    # Boost if average relevance is high
+    if relevance_scores and len(relevance_scores) >= 3:
+        mean = sum(relevance_scores) / len(relevance_scores)
+        if mean > 0.6:
+            k = min(k + 1, n)
+    return k
+
 
 def embed_rank_skills(task, skills, top_k=3):
     model = _get_embed_model()
@@ -165,7 +194,7 @@ def select_skills(task, all_skills):
             candidates.append(s)
 
     # Embedding-based fallback: surface top semantic matches regardless of keyword overlap
-    embed_matches = embed_rank_skills(task, all_skills, top_k=3)
+    embed_matches = embed_rank_skills(task, all_skills, top_k=dynamic_top_k(all_skills))
     for s in embed_matches:
         if s not in candidates:
             candidates.append(s)
@@ -260,9 +289,33 @@ def run_task(task, selected_skills, all_skills=None, episodes=None):
             for e in episodes
         ) + "\n"
 
+    # RAG context — financial specification documents
+    rag_block = ""
+    try:
+        from rag import rag_context_for_task
+        rag_block = rag_context_for_task(task, k=3)
+    except ImportError:
+        pass
+
+    # Entity memory — known institution quirks
+    entity_block = ""
+    try:
+        from entity_memory import entity_context_for_task
+        entity_block = entity_context_for_task(task, k=2)
+    except ImportError:
+        pass
+
+    # MCP tool manifest
+    mcp_block = ""
+    try:
+        from mcp_client import tool_manifest_for_prompt
+        mcp_block = tool_manifest_for_prompt()
+    except ImportError:
+        pass
+
     system = f"""You are a self-building agent. You solve programming tasks, execute code, and grow your own skill library.
 
-{episode_block}
+{episode_block}{rag_block}{entity_block}{mcp_block}
 Available skills (you may reference any of these by name when relevant):
 {skill_index or "(none yet)"}
 
@@ -349,6 +402,24 @@ Do not omit these blocks. Even if you are uncertain, attempt them.
             messages=messages
         )
         reply = response.choices[0].message.content
+
+        # MCP tool calls take priority over EXECUTE blocks
+        try:
+            from mcp_client import execute_tool_calls, register_agent_tools
+            tool_results = execute_tool_calls(reply)
+            register_agent_tools(reply)
+        except ImportError:
+            tool_results = []
+
+        if tool_results:
+            tool_summary = "\n".join(
+                f"Tool '{r['call'].get('tool','?')}' result:\n{r['result'][:500]}"
+                for r in tool_results
+            )
+            print(f"  [MCP tools executed: {[r['call'].get('tool') for r in tool_results]}]")
+            messages.append({"role": "assistant", "content": reply})
+            messages.append({"role": "user", "content": f"{tool_summary}\n\nContinue or finalize your response."})
+            continue
 
         code = extract_code_block(reply)
         if code:
@@ -744,6 +815,28 @@ def materialize_py_skill(code, task=""):
     except ImportError:
         pass  # compliance.py not available — skip shield
 
+    # ValidationAgent: adversarial edge-case testing before final persist
+    try:
+        from validation_agent import run_validation
+        val_passed, val_detail = run_validation(code, task)
+        if not val_passed:
+            print(f"  ✗ ValidationAgent FAILED '{name}': {val_detail[:200]}")
+            log_result(
+                task=task, response="", outcome="skill_validation_failed",
+                skill_written=None, skill_verified=None, skill_verify_failed=True,
+                skills_used=[], skills_considered=0, skill_composed=False,
+                composed_from=[], skill_evolved=False, skill_version=None,
+                code_executed=0, new_tasks_queued=[],
+                failure_type="tool_misuse", recovery_attempted=False,
+                recovery_succeeded=False,
+                validation_failed=True, validation_detail=val_detail[:500],
+            )
+            return "validation_failed", val_detail
+        else:
+            print(f"  ✓ ValidationAgent passed '{name}'")
+    except ImportError:
+        pass  # validation_agent not available — skip
+
     skill = {"metadata": metadata, "body": code, "filepath": filepath}
     save_py_skill(skill)
     return "verified", skill
@@ -854,7 +947,8 @@ def compose_skills(task, py_skills, top_k=3):
             score = len(task_words & set(t.lower() for t in s["metadata"].get("tags", [])))
             ranked.append((score, s))
     ranked.sort(key=lambda x: x[0], reverse=True)
-    candidates = [s for _, s in ranked[:top_k]]
+    k = dynamic_top_k(py_skills)
+    candidates = [s for _, s in ranked[:k]]
     if not candidates:
         return None, []
 

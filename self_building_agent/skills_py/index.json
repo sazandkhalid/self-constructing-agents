@@ -1,1 +1,21 @@
-[]
+[
+  {
+    "file": "extract_entries.py",
+    "skill": "extract_entries",
+    "version": 1,
+    "tags": [
+      "what",
+      "function",
+      "parser",
+      "used",
+      "extract"
+    ],
+    "verified": true,
+    "protocol": null,
+    "rail": null,
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  }
+]
