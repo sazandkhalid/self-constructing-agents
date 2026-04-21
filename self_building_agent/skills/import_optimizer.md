@@ -7,7 +7,7 @@ trigger: when optimizing import statements in a Python repository
 type: pattern
 version: 1
 success_count: 0
-fail_count: 2
+fail_count: 3
 ---
 ---
 # Import Optimizer

@@ -1,0 +1,144 @@
+Loaded 3 benchmark tasks (limit=3)
+
+>>> RESETTING STATE FOR COLD CONDITION
+
+######################################################################
+# COLD: 3 benchmark tasks
+######################################################################
+
+[COLD] 1/3 (TIER1) List every module inside fastapi/ that imports from starlette and report which s
+  [embedding model unavailable: No module named 'sentence_transformers']
+  [Executed code, result: ...]
+  [Executed code, result: Modules that import from starlette:
+...]
+  [Executed code, result: No modules found that import from starlette.
+...]
+  Skill 'import_optimizer' marked as unhelpful.
+  Skill 'module_import_analyzer' marked as helpful.
+  Skill 'python_import_analyzer' marked as helpful.
+  ⚠ failure detected → missing_context | strategy: retrieve 3 more relevant files and retry
+  [Executed code, result: responses.py: ['EventSourceResponse']
+templating.py: ['Jinja2Templates']
+exception_handlers.py: []
+websockets.py: ['WebSocket', 'WebSocketDisconnect', 'WebSocketState']
+concurrency.py: ['iterate_in_th...]
+  [Executed code, result: ...]
+  [Executed code, result: ...]
+  ✗ recovery failed (grade 1→0)
+  → fail in 88.1s | skills_used=['import_optimizer', 'module_import_analyzer', 'python_import_analyzer'] | py_verified=None
+
+[COLD] 2/3 (TIER2) Write a new APIRoute subclass that follows the constructor signature and attribu
+  ! task errored: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kez0kerwfs1tdemyvw9trcw4` service tier `on_demand` on tokens per minute (TPM): Limit 12000, Used 9043, Requested 4088. Please try again in 5.655s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+  → fail in 17.8s | skills_used=[] | py_verified=None
+
+[COLD] 3/3 (TIER3) Find a code pattern that is repeated across at least three files in fastapi/ and
+  Skill 'code_pattern_abstraction_skill' marked as helpful.
+  ⚠ failure detected → hallucination | strategy: ground output against actual source code
+  ✓ recovery succeeded (grade 1→2)
+  → success in 36.2s | skills_used=['code_pattern_abstraction_skill'] | py_verified=None
+
+>>> RESETTING STATE FOR WARM CONDITION
+
+######################################################################
+# EXPLORATION: 3 warm-up tasks
+######################################################################
+
+[explore 1/3] Explore fastapi/routing.py and extract the APIRoute construction pattern as a re
+  Skill 'apiroute_construction.md' duplicates 'custom_api_route_skill' (jaccard=0.55), skipping.
+  Skill 'code_pattern_abstraction_skill' marked as helpful.
+  Skill 'custom_api_route_skill' marked as helpful.
+  → success | py_verified=None
+
+[explore 2/3] Map how fastapi/dependencies/utils.py resolves dependency callables and encode i
+  Skill 'fastapi_dependency_resolver.md' duplicates 'fastapi_dependency_resolution' (same trigger), skipping.
+  ✓ ValidationAgent passed 'resolve_callables'
+  Skill 'fastapi_dependency_resolution' marked as helpful.
+  ⚠ failure detected → hallucination | strategy: ground output against actual source code
+  ✗ ValidationAgent FAILED 'resolve_dependency_callable': 
+STDERR:
+Traceback (most recent call last):
+  File "/var/folders/qt/c5qm7fpx0k9dhpgw5bkqj3wc0000gn/T/tmp6g0slrbh.py", line 21, in <module>
+    assert resolve_dependency_callable(None) is None
+        
+  ✗ recovery failed (grade 1→1)
+  → success | py_verified=resolve_callables
+
+[explore 3/3] Read fastapi/params.py and write a skill that builds Param subclasses following 
+  [Executed code, result: 
+STDERR:
+Traceback (most recent call last):
+  File "/var/folders/qt/c5qm7fpx0k9dhpgw5bkqj3wc0000gn/T/tmptz0lbkbp.py", line 1, in <module>
+    from fastapi import Param
+ModuleNotFoundError: No module n...]
+  [Executed code, result: 
+STDERR:
+Traceback (most recent call last):
+  File "/var/folders/qt/c5qm7fpx0k9dhpgw5bkqj3wc0000gn/T/tmpt73te5cr.py", line 3, in <module>
+    from fastapi import Param, FastAPI
+ModuleNotFoundError: No...]
+  [MCP tools executed: ['read_file']]
+  Skill 'custom_param_skill.md' duplicates 'param_subclass_skill' (same trigger), skipping.
+  Skill 'param_subclass_skill' marked as unhelpful.
+  ⚠ failure detected → missing_context | strategy: retrieve 3 more relevant files and retry
+  [Executed code, result: 
+STDERR:
+Traceback (most recent call last):
+  File "/var/folders/qt/c5qm7fpx0k9dhpgw5bkqj3wc0000gn/T/tmp79i8u3at.py", line 7, in <module>
+    from fastapi.exceptions import FastAPIDeprecationWarning
+M...]
+  ✓ ValidationAgent passed 'create_param'
+  ✓ recovery succeeded (grade 1→2)
+  → success | py_verified=create_param
+
+Exploration produced 3 new verified py skills: ['create_param.py', 'index.json', 'resolve_callables.py']
+
+######################################################################
+# WARM: 3 benchmark tasks
+######################################################################
+
+[WARM] 1/3 (TIER1) List every module inside fastapi/ that imports from starlette and report which s
+  [Executed code, result: 
+STDERR:
+Traceback (most recent call last):
+  File "/var/folders/qt/c5qm7fpx0k9dhpgw5bkqj3wc0000gn/T/tmpaef0byeq.py", line 25, in <module>
+    starlette_imports = find_starlette_imports(directory)
+  F...]
+  [Executed code, result: 
+STDERR:
+Traceback (most recent call last):
+  File "/var/folders/qt/c5qm7fpx0k9dhpgw5bkqj3wc0000gn/T/tmpe55d_mp7.py", line 25, in <module>
+    starlette_imports = find_starlette_imports(directory)
+  F...]
+  [Executed code, result: ...]
+  ✗ ValidationAgent FAILED 'find_starlette_imports': 
+STDERR:
+Traceback (most recent call last):
+  File "/var/folders/qt/c5qm7fpx0k9dhpgw5bkqj3wc0000gn/T/tmpwdtw10cq.py", line 25, in <module>
+    assert find_starlette_imports(None) == {}
+           ~~~~
+  Skill 'code_structure_analyzer' marked as helpful.
+  Skill 'import_analyzer' marked as helpful.
+  Skill 'module_import_analyzer' marked as helpful.
+  Skill 'python_import_analyzer' marked as helpful.
+  ⚠ failure detected → missing_context | strategy: retrieve 3 more relevant files and retry
+  ✓ recovery succeeded (grade 1→2)
+  → success in 95.5s | skills_used=['code_structure_analyzer', 'import_analyzer', 'module_import_analyzer', 'python_import_analyzer'] | py_verified=None
+
+[WARM] 2/3 (TIER2) Write a new APIRoute subclass that follows the constructor signature and attribu
+  [Executed code, result: 
+STDERR:
+Traceback (most recent call last):
+  File "/var/folders/qt/c5qm7fpx0k9dhpgw5bkqj3wc0000gn/T/tmpqfrnz6az.py", line 1, in <module>
+    from fastapi import APIRoute
+ModuleNotFoundError: No modul...]
+  ! task errored: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kez0kerwfs1tdemyvw9trcw4` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99199, Requested 3655. Please try again in 41m5.856s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+  → fail in 25.1s | skills_used=[] | py_verified=None
+
+[WARM] 3/3 (TIER3) Find a code pattern that is repeated across at least three files in fastapi/ and
+  ! task errored: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kez0kerwfs1tdemyvw9trcw4` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99199, Requested 2755. Please try again in 28m8.255999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}
+  → fail in 0.4s | skills_used=[] | py_verified=None
+
+>>> SCORING
+
+Done. Scores at eval/results/scores.json
+Run: venv/bin/python eval/report.py

@@ -3,97 +3,121 @@
     {
       "tier": "TIER1",
       "task": "List every module inside fastapi/ that imports from starlette and report which starlette names each one imports.",
-      "score": 3,
-      "judge_score": 2,
+      "score": 0,
+      "judge_score": 0,
       "exec_ok": false,
-      "refs_real_files": true,
+      "refs_real_files": false,
       "used_verified_skill": false,
-      "reasoning": "The agent's answer is correct, specific, and grounded in the real FastAPI structure, providing a clear list of modules that import from Starlette along with the imported names.",
+      "refs_payment_symbols": false,
+      "reasoning": "The agent's answer contains an error message about a rate limit being reached and does not provide any information about the modules in the FastAPI repository that import from Starlette.",
       "py_skill_verified": null,
-      "skill_composed": false
+      "skill_composed": false,
+      "failure_type": null,
+      "recovery_attempted": false,
+      "recovery_succeeded": false
     },
     {
       "tier": "TIER2",
       "task": "Write a new APIRoute subclass that follows the constructor signature and attribute conventions used in fastapi/routing.py APIRoute, adding a single new attribute called custom_tag.",
-      "score": 3,
-      "judge_score": 2,
+      "score": 0,
+      "judge_score": 0,
       "exec_ok": false,
-      "refs_real_files": true,
+      "refs_real_files": false,
       "used_verified_skill": false,
-      "reasoning": "The agent's answer is correct, specific, and grounded in real FastAPI structure, as it accurately creates a new APIRoute subclass with the required custom attribute.",
+      "refs_payment_symbols": false,
+      "reasoning": "judge error: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kez0kerwfs1tdemyvw9trcw4` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99998, Requested 512. Please try again in 7m20.64s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
       "py_skill_verified": null,
-      "skill_composed": false
+      "skill_composed": false,
+      "failure_type": null,
+      "recovery_attempted": false,
+      "recovery_succeeded": false
     },
     {
       "tier": "TIER3",
       "task": "Find a code pattern that is repeated across at least three files in fastapi/ and write a verified Python skill that abstracts it. Cite the three source files.",
-      "score": 2,
-      "judge_score": 1,
+      "score": 0,
+      "judge_score": 0,
       "exec_ok": false,
-      "refs_real_files": true,
+      "refs_real_files": false,
       "used_verified_skill": false,
-      "reasoning": "The agent's answer identifies relevant source files and proposes a potential abstraction, but it does not provide a clear and concrete example of the repeated code pattern or the abstracted Python skill.",
+      "refs_payment_symbols": false,
+      "reasoning": "judge error: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kez0kerwfs1tdemyvw9trcw4` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99998, Requested 513. Please try again in 7m21.504s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
       "py_skill_verified": null,
-      "skill_composed": false
+      "skill_composed": false,
+      "failure_type": null,
+      "recovery_attempted": false,
+      "recovery_succeeded": false
     }
   ],
   "warm": [
     {
       "tier": "TIER1",
       "task": "List every module inside fastapi/ that imports from starlette and report which starlette names each one imports.",
-      "score": 3,
-      "judge_score": 2,
+      "score": 0,
+      "judge_score": 0,
       "exec_ok": false,
-      "refs_real_files": true,
-      "used_verified_skill": true,
-      "reasoning": "The agent's answer is correct, specific, and grounded in real FastAPI structure, providing a detailed explanation and a Python function to find Starlette imports in the FastAPI repository.",
-      "py_skill_verified": "find_starlette_imports",
-      "skill_composed": false
+      "refs_real_files": false,
+      "used_verified_skill": false,
+      "refs_payment_symbols": false,
+      "reasoning": "judge error: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kez0kerwfs1tdemyvw9trcw4` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99998, Requested 501. Please try again in 7m11.135999999s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+      "py_skill_verified": null,
+      "skill_composed": false,
+      "failure_type": null,
+      "recovery_attempted": false,
+      "recovery_succeeded": false
     },
     {
       "tier": "TIER2",
       "task": "Write a new APIRoute subclass that follows the constructor signature and attribute conventions used in fastapi/routing.py APIRoute, adding a single new attribute called custom_tag.",
-      "score": 3,
-      "judge_score": 2,
+      "score": 0,
+      "judge_score": 0,
       "exec_ok": false,
-      "refs_real_files": true,
+      "refs_real_files": false,
       "used_verified_skill": false,
-      "reasoning": "The agent provided a correct and specific solution by creating a new APIRoute subclass with a custom attribute, following the constructor signature and attribute conventions used in fastapi/routing.py APIRoute.",
+      "refs_payment_symbols": false,
+      "reasoning": "judge error: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kez0kerwfs1tdemyvw9trcw4` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99998, Requested 512. Please try again in 7m20.64s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
       "py_skill_verified": null,
-      "skill_composed": false
+      "skill_composed": false,
+      "failure_type": null,
+      "recovery_attempted": false,
+      "recovery_succeeded": false
     },
     {
       "tier": "TIER3",
       "task": "Find a code pattern that is repeated across at least three files in fastapi/ and write a verified Python skill that abstracts it. Cite the three source files.",
-      "score": 3,
-      "judge_score": 2,
+      "score": 0,
+      "judge_score": 0,
       "exec_ok": false,
-      "refs_real_files": true,
-      "used_verified_skill": true,
-      "reasoning": "The agent's answer correctly identifies a repeated code pattern in the FastAPI repository, abstracts it into a verified Python skill, and cites relevant source files.",
-      "py_skill_verified": "get_type_hints",
-      "skill_composed": false
+      "refs_real_files": false,
+      "used_verified_skill": false,
+      "refs_payment_symbols": false,
+      "reasoning": "judge error: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kez0kerwfs1tdemyvw9trcw4` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99998, Requested 513. Please try again in 7m21.504s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}}",
+      "py_skill_verified": null,
+      "skill_composed": false,
+      "failure_type": null,
+      "recovery_attempted": false,
+      "recovery_succeeded": false
     }
   ],
   "summary": {
-    "cold_avg": 2.667,
-    "warm_avg": 3.0,
-    "improvement_pct": 12.5,
+    "cold_avg": 0.0,
+    "warm_avg": 0.0,
+    "improvement_pct": 0.0,
     "tier1_delta": 0.0,
     "tier2_delta": 0.0,
-    "tier3_delta": 1.0,
+    "tier3_delta": 0.0,
     "cold_by_tier": {
-      "TIER1": 3.0,
-      "TIER2": 3.0,
-      "TIER3": 2.0
+      "TIER1": 0.0,
+      "TIER2": 0.0,
+      "TIER3": 0.0
     },
     "warm_by_tier": {
-      "TIER1": 3.0,
-      "TIER2": 3.0,
-      "TIER3": 3.0
+      "TIER1": 0.0,
+      "TIER2": 0.0,
+      "TIER3": 0.0
     },
-    "skills_used_in_warm": 2,
+    "skills_used_in_warm": 0,
     "compositions": 0,
-    "skills_built_during_exploration": 2
+    "skills_built_during_exploration": 0
   }
 }

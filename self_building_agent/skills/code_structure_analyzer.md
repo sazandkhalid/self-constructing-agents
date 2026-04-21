@@ -6,7 +6,7 @@ tags:
 trigger: when analyzing the code structure of a repository
 type: pattern
 version: 1
-success_count: 17
+success_count: 18
 fail_count: 7
 ---
 ---

@@ -1,0 +1,29 @@
+============================================================
+=== EXPERIMENT RESULTS ===
+Target repo: fastapi
+Tasks: 3 (5 structural / 5 pattern / 5 novel)
+
+COLD (no skills):     avg score 0.67/3.0
+WARM (with skills):   avg score 0.33/3.0
+Improvement:          -50.0%
+
+Tier 1 (structural):  cold 1.00 → warm 1.00  (Δ +0.00)
+Tier 2 (pattern):  cold 0.00 → warm 0.00  (Δ +0.00)
+Tier 3 (novel  ):  cold 1.00 → warm 0.00  (Δ -1.00)
+
+Skills built during exploration: 3
+Skills used in warm condition:   0
+Skill compositions:              0
+
+Failure type distribution (cold):
+  missing_context: 1
+  hallucination: 1
+  Recovery success rate: 50% (2 attempts)
+
+Failure type distribution (warm):
+  missing_context: 1
+  Recovery success rate: 100% (1 attempts)
+
+=== VERDICT ===
+(LLM verdict unavailable: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01kez0kerwfs1tdemyvw9trcw4` service tier `on_demand` on tokens per day (TPD): Limit 100000, Used 99824, Requested 592. Please try again in 5m59.424s. Need more tokens? Upgrade to Dev Tier today at https://console.groq.com/settings/billing', 'type': 'tokens', 'code': 'rate_limit_exceeded'}})
+============================================================
