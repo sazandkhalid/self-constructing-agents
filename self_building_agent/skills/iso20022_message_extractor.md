@@ -7,7 +7,7 @@ trigger: When extracting ISO 20022 message type constants from a Python file.
 type: pattern
 version: 1
 success_count: 0
-fail_count: 0
+fail_count: 1
 ---
 ---
 # ISO 20022 Message Extractor
