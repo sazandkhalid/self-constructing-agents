@@ -89,7 +89,7 @@ Score 0, 1, or 2:
 Respond with ONLY a JSON object: {{"score": 0|1|2, "reasoning": "one sentence"}}"""
     try:
         r = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="qwen/qwen3-32b",
             max_tokens=200,
             messages=[{"role": "user", "content": prompt}],
         )

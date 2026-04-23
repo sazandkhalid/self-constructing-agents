@@ -7,8 +7,8 @@ tags:
 trigger: when resolving dependency callables in FastAPI applications
 type: pattern
 version: 1
-success_count: 0
-fail_count: 1
+success_count: 2
+fail_count: 2
 ---
 ---
 # FastAPI Dependency Resolution

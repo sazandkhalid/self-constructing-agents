@@ -1,7 +1,8 @@
 import os, json, re, yaml, subprocess, tempfile, ast, hashlib, shutil, sys
 from datetime import datetime, timezone
 from collections import deque
-from groq import Groq
+from google import genai
+from google.genai import types as genai_types
 
 # Optional addons — imported lazily so existing tests keep working if a module
 # hasn't been created yet.
@@ -19,7 +20,74 @@ LOG_FILE = "logs/log.jsonl"
 for _d in (PY_SKILLS_DIR, PY_SKILLS_ARCHIVE, "memory", "logs", "skills"):
     os.makedirs(_d, exist_ok=True)
 
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+
+
+class TokenBudget:
+    """Tracks estimated Gemini API cost and warns before hitting budget."""
+    _PRICING = {  # USD per million tokens (pay-as-you-go; free tier has no cost)
+        "gemini-2.0-flash":      {"input": 0.10, "output": 0.40},
+        "gemini-2.0-flash-lite": {"input": 0.075, "output": 0.30},
+        "gemini-1.5-flash":      {"input": 0.075, "output": 0.30},
+        "gemini-1.5-pro":        {"input": 1.25, "output": 5.00},
+        "gemini-2.5-pro":        {"input": 1.25, "output": 10.00},
+    }
+    INPUT_EST  = 2000   # tokens per call (conservative)
+    OUTPUT_EST = 500
+
+    def __init__(self, model: str, budget_usd: float = float(os.environ.get("GEMINI_BUDGET_USD", "2.00"))):
+        p = self._PRICING.get(model, {"input": 0.10, "output": 0.40})
+        self.budget_usd = budget_usd
+        self.cost_per_call = (self.INPUT_EST * p["input"] + self.OUTPUT_EST * p["output"]) / 1_000_000
+        self.calls = 0
+        self.estimated_cost = 0.0
+
+    def can_run(self) -> bool:
+        return self.estimated_cost + self.cost_per_call < self.budget_usd
+
+    def record_call(self):
+        self.calls += 1
+        self.estimated_cost += self.cost_per_call
+
+    def status(self) -> str:
+        return f"~${self.estimated_cost:.4f}/${self.budget_usd:.2f} ({self.calls} calls)"
+
+    def calls_remaining(self) -> int:
+        return max(0, int((self.budget_usd - self.estimated_cost) / self.cost_per_call))
+
+
+budget = TokenBudget(MODEL)
+
+
+def _llm(messages, max_tokens=2000):
+    """Thin wrapper: extracts system role, converts to Gemini format, calls API."""
+    if not budget.can_run():
+        print(f"  [BUDGET] Soft limit reached — {budget.status()}. Set GEMINI_BUDGET_USD to increase.")
+    system_parts = [m["content"] for m in messages if m["role"] == "system"]
+    user_messages = [m for m in messages if m["role"] != "system"]
+
+    system_instruction = "\n\n".join(system_parts) if system_parts else None
+
+    # Build Gemini content list (role "assistant" → "model")
+    if len(user_messages) == 1:
+        contents = user_messages[0]["content"]
+    else:
+        contents = [
+            genai_types.Content(
+                role="model" if m["role"] == "assistant" else "user",
+                parts=[genai_types.Part(text=m["content"])]
+            )
+            for m in user_messages
+        ]
+
+    cfg = genai_types.GenerateContentConfig(
+        max_output_tokens=max_tokens,
+        system_instruction=system_instruction,
+    )
+    r = client.models.generate_content(model=MODEL, contents=contents, config=cfg)
+    budget.record_call()
+    return r.text
 
 # Optional embedding model for semantic skill selection fallback.
 # Loaded lazily so the agent still runs if sentence-transformers isn't installed.
@@ -218,12 +286,7 @@ Available skills:
 {skill_descriptions}"""
 
     try:
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            max_tokens=200,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        raw = response.choices[0].message.content.strip()
+        raw = _llm([{"role": "user", "content": prompt}], max_tokens=200).strip()
         # Extract JSON array from response (LLM may wrap it in text)
         match = re.search(r'\[.*?\]', raw, re.DOTALL)
         selected_names = json.loads(match.group()) if match else []
@@ -338,7 +401,17 @@ print(reverse_string("hello"))
 ```
 ---END EXECUTE---
 
-3a. PREFERRED: if your solution can be expressed as a self-contained Python function with a unit test, emit a PY SKILL block. The test MUST print exactly "TEST PASSED" on success.
+3a. MANDATORY: for every coding task you MUST emit a ---PY SKILL--- block containing a
+self-contained Python function with a unit test. Do not just explain the solution — write
+the actual function. The test block MUST use plain assert statements (no pytest/unittest)
+and MUST end with exactly: print("TEST PASSED")
+Runnable as: python skill_file.py
+Example correct test format:
+if __name__ == "__main__":
+    result = my_function(test_input)
+    assert result == expected_output, f"Got {{result}}"
+    print("TEST PASSED")
+
 For payment-domain skills, include these header fields at the top of the function body (as comments, before the def):
 # protocol: one of iso20022|ach|fedwire|sepa|internal|general
 # rail: one of swift_mx|fednow|rtp|nacha|sepa_ct|on_chain|general
@@ -396,12 +469,7 @@ Do not omit these blocks. Even if you are uncertain, attempt them.
     reply = ""
 
     for i in range(max_iterations):
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            max_tokens=2000,
-            messages=messages
-        )
-        reply = response.choices[0].message.content
+        reply = _llm(messages, max_tokens=2000)
 
         # MCP tool calls take priority over EXECUTE blocks
         try:
@@ -570,12 +638,7 @@ For each skill, did it meaningfully help complete this task?
 Return ONLY JSON: {{"skill_name": true/false, ...}}"""
 
     try:
-        eval_response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            max_tokens=200,
-            messages=[{"role": "user", "content": prompt}]
-        )
-        raw = eval_response.choices[0].message.content.strip()
+        raw = _llm([{"role": "user", "content": prompt}], max_tokens=200).strip()
         match = re.search(r'\{.*?\}', raw, re.DOTALL)
         verdicts = json.loads(match.group()) if match else {}
     except Exception:
@@ -725,6 +788,7 @@ def verify_py_skill(code, timeout=30):
     try:
         ast.parse(code)
     except SyntaxError as e:
+        print(f"  [verify] SYNTAX ERROR: {e}")
         return False, f"SYNTAX ERROR: {e}"
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
         f.write(code)
@@ -733,11 +797,21 @@ def verify_py_skill(code, timeout=30):
         result = subprocess.run(
             ["python3", path], capture_output=True, text=True, timeout=timeout
         )
-        out = (result.stdout or "") + (("\nSTDERR:\n" + result.stderr) if result.stderr else "")
-        passed = result.returncode == 0 and "TEST PASSED" in (result.stdout or "")
+        stdout = result.stdout or ""
+        stderr = result.stderr or ""
+        out = stdout + ("\nSTDERR:\n" + stderr if stderr else "")
+        passed = result.returncode == 0 and "TEST PASSED" in stdout
+        if not passed:
+            reason = "no TEST PASSED in stdout" if result.returncode == 0 else f"exit {result.returncode}"
+            print(f"  [verify] FAILED ({reason})")
+            if stderr:
+                print(f"  [verify] stderr: {stderr[:300]}")
+            if stdout and "TEST PASSED" not in stdout:
+                print(f"  [verify] stdout: {stdout[:200]}")
         return passed, out[:2000]
     except subprocess.TimeoutExpired:
-        return False, "TIMEOUT after 30s"
+        print(f"  [verify] TIMEOUT after {timeout}s")
+        return False, f"TIMEOUT after {timeout}s"
     finally:
         try:
             os.unlink(path)
@@ -857,12 +931,7 @@ Output ONLY a Python file with:
 
 Return only the code."""
     try:
-        r = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            max_tokens=1500,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        code = r.choices[0].message.content.strip()
+        code = _llm([{"role": "user", "content": prompt}], max_tokens=1500).strip()
         code = re.sub(r"^```\w*\s*", "", code)
         code = re.sub(r"```\s*$", "", code).strip()
         return code
@@ -892,12 +961,7 @@ Output ONLY the corrected Python module. It must:
 - Print "TEST PASSED" on success
 - Not be wrapped in markdown fences"""
     try:
-        r = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            max_tokens=1500,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        new_code = r.choices[0].message.content.strip()
+        new_code = _llm([{"role": "user", "content": prompt}], max_tokens=1500).strip()
         new_code = re.sub(r"^```\w*\s*", "", new_code)
         new_code = re.sub(r"```\s*$", "", new_code).strip()
     except Exception as e:
@@ -972,12 +1036,7 @@ If composition is not possible, respond with exactly: NO_COMPOSITION
 
 Do not wrap in markdown fences."""
     try:
-        r = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            max_tokens=1500,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        out = r.choices[0].message.content.strip()
+        out = _llm([{"role": "user", "content": prompt}], max_tokens=1500).strip()
     except Exception:
         return None, []
 
@@ -1175,12 +1234,7 @@ ANSWER: {response[:1500]}
 
 Respond with ONLY a single digit."""
     try:
-        r = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            max_tokens=5,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        m = re.search(r"[012]", r.choices[0].message.content)
+        m = re.search(r"[012]", _llm([{"role": "user", "content": prompt}], max_tokens=5))
         return int(m.group()) if m else 0
     except Exception:
         return 0
@@ -1203,12 +1257,7 @@ ANSWER: {response[:1500]}
 
 Respond with ONLY the failure type (snake_case)."""
     try:
-        r = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            max_tokens=20,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        raw = r.choices[0].message.content.strip().lower()
+        raw = _llm([{"role": "user", "content": prompt}], max_tokens=20).strip().lower()
         for ft in FAILURE_TYPES:
             if ft in raw:
                 return ft
@@ -1389,6 +1438,7 @@ def run_single_task(task, target_repo=None, task_queue=None):
         recovery_succeeded=recovery_succeeded,
     )
 
+    print(f"  [BUDGET] {budget.status()} — {budget.calls_remaining()} calls remaining")
     return {
         "task": task,
         "response": response,

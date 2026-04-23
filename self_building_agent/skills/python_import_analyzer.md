@@ -7,7 +7,7 @@ tags:
 trigger: when analyzing Python code for imports from specific modules
 type: pattern
 version: 1
-success_count: 18
+success_count: 24
 fail_count: 6
 ---
 ---

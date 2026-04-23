@@ -1,0 +1,39 @@
+Write a Python function called cents_to_dollars(cents: int) -> float that divides cents by 100 and rounds to 2 decimal places. Test: if __name__ == "__main__": assert cents_to_dollars(4783250) == 47832.50; print("TEST PASSED")
+
+Write a Python function called dollars_to_cents(amount: float) -> int that converts a dollar amount to integer cents using round(). Test: if __name__ == "__main__": assert dollars_to_cents(47832.50) == 4783250; print("TEST PASSED")
+
+Write a Python function called format_iban(iban: str) -> str that removes all spaces from the input and converts to uppercase. Test: if __name__ == "__main__": assert format_iban("gb29 nwbk 6016") == "GB29NWBK6016"; print("TEST PASSED")
+
+Write a Python function called get_iban_country(iban: str) -> str that returns the first 2 characters of an IBAN string in uppercase, or raises ValueError if the string is shorter than 2 characters. Test: if __name__ == "__main__": assert get_iban_country("DE89370400440532013000") == "DE"; assert get_iban_country("GB29NWBK") == "GB"; print("TEST PASSED")
+
+Write a Python function called is_sepa_country(country_code: str) -> bool that returns True if the country code is in this set: GB, DE, FR, ES, IT, NL, BE, AT, PT, IE, FI, SE, DK, NO, PL, CZ, HU, RO, SK, SI, EE, LV, LT, LU, MT, CY, GR, HR, BG. Test: if __name__ == "__main__": assert is_sepa_country("DE") == True; assert is_sepa_country("US") == False; print("TEST PASSED")
+
+Write a Python function called make_msg_id(prefix: str, date_str: str, sequence: int) -> str that returns a string like "NWBK-20251119-001" with the sequence zero-padded to 3 digits. Test: if __name__ == "__main__": assert make_msg_id("NWBK", "20251119", 1) == "NWBK-20251119-001"; assert make_msg_id("DEUT", "20251119", 42) == "DEUT-20251119-042"; print("TEST PASSED")
+
+Write a Python function called mask_iban(iban: str) -> str that replaces all characters except the first 4 and last 4 with asterisks. Test: if __name__ == "__main__": assert mask_iban("DE89370400440532013000") == "DE89**************3000"; print("TEST PASSED")
+
+Write a Python function called parse_iso_amount(amount_str: str) -> float that converts a string like "47832.50" to a float, raising ValueError if the string is not a valid positive number. Test: if __name__ == "__main__": assert parse_iso_amount("47832.50") == 47832.50; assert parse_iso_amount("0.01") == 0.01; print("TEST PASSED")
+
+Write a Python function called validate_bic(bic: str) -> bool that returns True if the BIC is either 8 or 11 uppercase alphanumeric characters, False otherwise. Test: if __name__ == "__main__": assert validate_bic("NWBKGB2L") == True; assert validate_bic("DEUTDEDB") == True; assert validate_bic("INVALID") == False; print("TEST PASSED")
+
+Write a Python function called get_currency_symbol(currency_code: str) -> str that returns the symbol for EUR (€), GBP (£), USD ($), JPY (¥), CHF (Fr), and returns the code itself for any other currency. Test: if __name__ == "__main__": assert get_currency_symbol("EUR") == "€"; assert get_currency_symbol("GBP") == "£"; assert get_currency_symbol("XYZ") == "XYZ"; print("TEST PASSED")
+
+Write a Python function called build_end_to_end_id(reference: str, date_str: str) -> str that returns a string like "E2E-INV-2025-0847-20251119" by combining the reference and date. Test: if __name__ == "__main__": assert build_end_to_end_id("INV-2025-0847", "20251119") == "E2E-INV-2025-0847-20251119"; print("TEST PASSED")
+
+Write a Python function called round_to_cents(amount: float) -> float that rounds a float to exactly 2 decimal places using the standard rounding rule. Test: if __name__ == "__main__": assert round_to_cents(0.001) == 0.0; assert round_to_cents(1.005) == 1.01 or round_to_cents(1.005) == 1.0; print("TEST PASSED")
+
+Write a Python function called extract_xml_field(xml_string: str, tag: str) -> str that finds the first occurrence of <tag>VALUE</tag> in the string using re.search and returns VALUE, or returns empty string if not found. Test: if __name__ == "__main__": xml = "<MsgId>TEST-001</MsgId><Amt>100.00</Amt>"; assert extract_xml_field(xml, "MsgId") == "TEST-001"; assert extract_xml_field(xml, "Missing") == ""; print("TEST PASSED")
+
+Write a Python function called is_valid_swift_date(date_str: str) -> bool that returns True if date_str matches YYYY-MM-DD format with valid month (01-12) and day (01-31), False otherwise. Test: if __name__ == "__main__": assert is_valid_swift_date("2025-11-19") == True; assert is_valid_swift_date("2025-13-01") == False; assert is_valid_swift_date("25-11-19") == False; print("TEST PASSED")
+
+Write a Python function called truncate_remittance(text: str, max_len: int = 140) -> str that truncates text to max_len characters and appends "..." if truncated. Test: if __name__ == "__main__": assert truncate_remittance("short") == "short"; long = "x" * 150; assert len(truncate_remittance(long)) == 143; assert truncate_remittance(long).endswith("..."); print("TEST PASSED")
+
+Write a Python function called classify_payment_amount(amount: float) -> str that returns "micro" if amount < 100, "standard" if 100 <= amount < 50000, "high_value" if 50000 <= amount < 1000000, "large" if amount >= 1000000. Test: if __name__ == "__main__": assert classify_payment_amount(50) == "micro"; assert classify_payment_amount(47832.50) == "standard"; assert classify_payment_amount(500000) == "high_value"; assert classify_payment_amount(2000000) == "large"; print("TEST PASSED")
+
+Write a Python function called get_iso20022_family(msg_type: str) -> str that returns "pacs" for messages starting with "pacs.", "camt" for "camt.", "pain" for "pain.", and "unknown" otherwise. Test: if __name__ == "__main__": assert get_iso20022_family("pacs.008.001.08") == "pacs"; assert get_iso20022_family("camt.053.001.08") == "camt"; assert get_iso20022_family("pain.001.001.09") == "pain"; assert get_iso20022_family("other") == "unknown"; print("TEST PASSED")
+
+Write a Python function called sanitize_party_name(name: str) -> str that strips leading/trailing whitespace, replaces multiple consecutive spaces with a single space, and truncates to 140 characters. Test: if __name__ == "__main__": import re; assert sanitize_party_name("  Meridian  Ltd  ") == "Meridian Ltd"; assert len(sanitize_party_name("x" * 200)) == 140; print("TEST PASSED")
+
+Write a Python function called compute_aba_checksum(routing: str) -> int that computes the ABA routing number checksum: given 9 digits d1-d9, return (3*(d1+d4+d7) + 7*(d2+d5+d8) + (d3+d6+d9)) % 10. Test: if __name__ == "__main__": assert compute_aba_checksum("021000021") == 0; assert compute_aba_checksum("111000038") == 0; print("TEST PASSED")
+
+Write a Python function called build_xml_element(tag: str, value: str, attrs: dict = None) -> str that returns a simple XML element string. If attrs is None or empty, return <tag>value</tag>. If attrs provided, include them like <tag key="val">value</tag>. Test: if __name__ == "__main__": assert build_xml_element("Amt", "100.00") == "<Amt>100.00</Amt>"; result = build_xml_element("Amt", "100.00", {"Ccy": "EUR"}); assert 'Ccy="EUR"' in result and "100.00" in result; print("TEST PASSED")

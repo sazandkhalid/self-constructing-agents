@@ -1,0 +1,36 @@
+============================================================
+=== EXPERIMENT RESULTS ===
+Target repo: fastapi
+Tasks: 3 (5 structural / 5 pattern / 5 novel)
+
+COLD (no skills):     avg score 1.67/3.0
+WARM (with skills):   avg score 1.67/3.0
+Improvement:          +0.0%
+
+Tier 1 (structural):  cold 2.00 → warm 2.00  (Δ +0.00)
+Tier 2 (pattern):  cold 2.00 → warm 2.00  (Δ +0.00)
+Tier 3 (novel  ):  cold 1.00 → warm 1.00  (Δ +0.00)
+
+Skills built during exploration: 0
+Skills used in warm condition:   2
+Skill compositions:              0
+
+Failure type distribution (cold):
+  missing_context: 3
+  Recovery success rate: 67% (3 attempts)
+
+Failure type distribution (warm):
+  missing_context: 3
+  Recovery success rate: 67% (3 attempts)
+
+Top performing skills:
+  1. analyze_starlette_imports (used 1 times, avg score 2.00)
+  2. skill_4e508f87 (used 1 times, avg score 2.00)
+
+=== VERDICT ===
+<think>
+Okay, let's break down what these results mean. The experiment compared an agent with a cold start (no accumulated skills) versus a warm start (with some skills). Both averaged the same score of 1.67 out of 3.0, which means there's no improvement. The deltas in tiers are all zero, so the agent didn't perform better on any specific type of task. They used 2 skills in the warm setup but didn't build any new ones during exploration. Since the skills used didn't lead to a performance boost, the hypothesis that having a repo-specific skill library helps isn't supported here. The results are neutral, showing no benefit, so the hypothesis isn't validated.
+</think>
+
+The hypothesis that an agent with an accumulated repository-specific skill library performs measurably better is not supported by these results. Both the cold and warm configurations achieved identical average scores (1.67/3.0), with no improvement observed (+0.0%). While the warm agent utilized two pre-existing skills, these contributed no meaningful performance gain, as indicated by the neutral tier deltas (structural, pattern, novel) and the absence of new skill creation or compositional leverage. The lack of skill-building during exploration and zero compositions further suggest that the provided skills either lacked relevance or utility in the experimental tasks. These findings highlight a weak or null effect of an accumulated skill library in this context, potentially due to mismatched skills, insufficient task complexity, or ineffective skill integration. The results neither confirm nor invalidate the broader hypothesis but underscore the need for more rigorous design to isolate the impact of such libraries.
+============================================================

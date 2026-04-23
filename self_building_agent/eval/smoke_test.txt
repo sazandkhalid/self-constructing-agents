@@ -1,0 +1,5 @@
+Write a Python function called add_numbers(a: int, b: int) -> int that returns the sum of a and b. The function must have a docstring. Include a unit test at the bottom: if __name__ == "__main__": result = add_numbers(2, 3); assert result == 5, f"Expected 5 got {result}"; print("TEST PASSED")
+
+Write a Python function called format_currency(amount: float, currency: str = "EUR") -> str that returns a string like "EUR 47,832.50" with comma-separated thousands and 2 decimal places. Include a unit test: if __name__ == "__main__": assert format_currency(47832.5) == "EUR 47,832.50"; print("TEST PASSED")
+
+Write a Python function called is_valid_country_code(code: str) -> bool that returns True if code is exactly 2 uppercase ASCII letters, False otherwise. Include a unit test: if __name__ == "__main__": assert is_valid_country_code("GB") == True; assert is_valid_country_code("DE") == True; assert is_valid_country_code("GBR") == False; assert is_valid_country_code("gb") == False; print("TEST PASSED")

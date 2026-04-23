@@ -15,9 +15,11 @@ import re
 import subprocess
 import tempfile
 
-from groq import Groq
+from google import genai
+from google.genai import types as genai_types
 
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+_client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
 
 
 def _generate_edge_case_tests(skill_code: str, task: str = "") -> str:
@@ -41,12 +43,12 @@ Requirements for your test module:
 
 Return ONLY the Python code. No markdown fences, no explanation."""
     try:
-        r = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            max_tokens=1500,
-            messages=[{"role": "user", "content": prompt}],
+        r = _client.models.generate_content(
+            model=_MODEL,
+            contents=prompt,
+            config=genai_types.GenerateContentConfig(max_output_tokens=1500),
         )
-        code = r.choices[0].message.content.strip()
+        code = r.text.strip()
         code = re.sub(r"^```\w*\s*", "", code)
         code = re.sub(r"```\s*$", "", code).strip()
         return code
