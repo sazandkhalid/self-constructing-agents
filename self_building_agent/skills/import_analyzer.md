@@ -8,7 +8,7 @@ trigger: When analyzing imports in a repository to identify frequently used modu
   or detect potential import conflicts.
 type: pattern
 version: 1
-success_count: 1
+success_count: 4
 fail_count: 0
 ---
 ---

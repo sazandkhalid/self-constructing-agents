@@ -1,0 +1,40 @@
+[
+  {
+    "file": "analyze_starlette_imports.py",
+    "skill": "analyze_starlette_imports",
+    "version": 1,
+    "tags": [
+      "list",
+      "every",
+      "module",
+      "inside",
+      "fastapi"
+    ],
+    "verified": true,
+    "protocol": null,
+    "rail": null,
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "skill_4e508f87.py",
+    "skill": "skill_4e508f87",
+    "version": 1,
+    "tags": [
+      "write",
+      "apiroute",
+      "subclass",
+      "follows",
+      "constructor"
+    ],
+    "verified": true,
+    "protocol": null,
+    "rail": null,
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  }
+]

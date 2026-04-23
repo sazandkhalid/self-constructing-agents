@@ -7,7 +7,7 @@ tags:
 trigger: when creating custom API routes in FastAPI with additional attributes
 type: pattern
 version: 1
-success_count: 2
+success_count: 4
 fail_count: 2
 ---
 ---

@@ -7,7 +7,7 @@ tags:
 trigger: when generating a report on starlette imports in a FastAPI repository
 type: pattern
 version: 1
-success_count: 0
+success_count: 3
 fail_count: 0
 ---
 ---

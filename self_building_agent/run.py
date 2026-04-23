@@ -219,7 +219,7 @@ Available skills:
 
     try:
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="qwen/qwen3-32b",
             max_tokens=200,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -397,7 +397,7 @@ Do not omit these blocks. Even if you are uncertain, attempt them.
 
     for i in range(max_iterations):
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="qwen/qwen3-32b",
             max_tokens=2000,
             messages=messages
         )
@@ -571,7 +571,7 @@ Return ONLY JSON: {{"skill_name": true/false, ...}}"""
 
     try:
         eval_response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="qwen/qwen3-32b",
             max_tokens=200,
             messages=[{"role": "user", "content": prompt}]
         )
@@ -858,7 +858,7 @@ Output ONLY a Python file with:
 Return only the code."""
     try:
         r = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="qwen/qwen3-32b",
             max_tokens=1500,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -893,7 +893,7 @@ Output ONLY the corrected Python module. It must:
 - Not be wrapped in markdown fences"""
     try:
         r = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="qwen/qwen3-32b",
             max_tokens=1500,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -973,7 +973,7 @@ If composition is not possible, respond with exactly: NO_COMPOSITION
 Do not wrap in markdown fences."""
     try:
         r = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="qwen/qwen3-32b",
             max_tokens=1500,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -1176,7 +1176,7 @@ ANSWER: {response[:1500]}
 Respond with ONLY a single digit."""
     try:
         r = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="qwen/qwen3-32b",
             max_tokens=5,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -1204,7 +1204,7 @@ ANSWER: {response[:1500]}
 Respond with ONLY the failure type (snake_case)."""
     try:
         r = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="qwen/qwen3-32b",
             max_tokens=20,
             messages=[{"role": "user", "content": prompt}],
         )

@@ -19,7 +19,7 @@ def _verdict(prompt):
         from groq import Groq
         client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
         r = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="qwen/qwen3-32b",
             max_tokens=400,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -212,7 +212,7 @@ Write a single paragraph (4-6 sentences) interpreting whether the hypothesis
 better than one without" is supported by these numbers. Be honest about
 weak or null results."""
         r = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="qwen/qwen3-32b",
             max_tokens=400,
             messages=[{"role": "user", "content": prompt}],
         )

@@ -7,7 +7,7 @@ tags:
 trigger: when creating custom Param subclasses in FastAPI applications
 type: pattern
 version: 1
-success_count: 0
+success_count: 1
 fail_count: 1
 ---
 ---

@@ -42,7 +42,7 @@ Requirements for your test module:
 Return ONLY the Python code. No markdown fences, no explanation."""
     try:
         r = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="qwen/qwen3-32b",
             max_tokens=1500,
             messages=[{"role": "user", "content": prompt}],
         )

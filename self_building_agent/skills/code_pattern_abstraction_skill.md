@@ -7,7 +7,7 @@ tags:
 trigger: when a code pattern is identified across multiple files in a repository
 type: pattern
 version: 1
-success_count: 4
+success_count: 6
 fail_count: 0
 ---
 ---
