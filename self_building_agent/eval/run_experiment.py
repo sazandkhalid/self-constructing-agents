@@ -9,7 +9,7 @@ Override exploration tasks:
     EXPLORE_TASKS_FILE=eval/exploration_tasks_simple.txt venv/bin/python eval/run_experiment.py ...
 
 Override model:
-    ANTHROPIC_MODEL=claude-haiku-4-5-20251001 venv/bin/python eval/run_experiment.py ...
+    GEMINI_MODEL=gemini-2.0-flash venv/bin/python eval/run_experiment.py ...
 """
 import argparse
 import json
@@ -152,7 +152,7 @@ def main():
     parser.add_argument("--max-explore", type=int, default=20)
     parser.add_argument("--max-bench",   type=int, default=15)
     parser.add_argument("--model", default=None,
-                        help="Override LLM model (overrides ANTHROPIC_MODEL env var)")
+                        help="Override LLM model (overrides GEMINI_MODEL env var)")
     parser.add_argument("--explore-tasks", default=None,
                         help="Path to exploration task file (overrides EXPLORE_TASKS_FILE env var)")
     parser.add_argument("--resume-warm", action="store_true",

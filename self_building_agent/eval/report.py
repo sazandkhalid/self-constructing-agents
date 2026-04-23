@@ -16,14 +16,15 @@ SCORES_PAYMENT = "eval/scores_payment.json"
 
 def _verdict(prompt):
     try:
-        from groq import Groq
-        client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-        r = client.chat.completions.create(
-            model="qwen/qwen3-32b",
-            max_tokens=400,
-            messages=[{"role": "user", "content": prompt}],
+        from google import genai
+        from google.genai import types as genai_types
+        _model = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+        c = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+        r = c.models.generate_content(
+            model=_model, contents=prompt,
+            config=genai_types.GenerateContentConfig(max_output_tokens=400),
         )
-        return r.choices[0].message.content.strip()
+        return r.text.strip()
     except Exception as e:
         return f"(LLM verdict unavailable: {e})"
 
@@ -192,10 +193,7 @@ def main():
         print()
 
     # LLM verdict
-    try:
-        from groq import Groq
-        client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-        prompt = f"""You are interpreting an experiment that compares a programming agent
+    prompt = f"""You are interpreting an experiment that compares a programming agent
 with vs. without an accumulated skill library.
 
 Results:
@@ -211,14 +209,7 @@ Write a single paragraph (4-6 sentences) interpreting whether the hypothesis
 "an agent with an accumulated repo-specific skill library performs measurably
 better than one without" is supported by these numbers. Be honest about
 weak or null results."""
-        r = client.chat.completions.create(
-            model="qwen/qwen3-32b",
-            max_tokens=400,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        verdict = r.choices[0].message.content.strip()
-    except Exception as e:
-        verdict = f"(LLM verdict unavailable: {e})"
+    verdict = _verdict(prompt)
 
     print("=== VERDICT ===")
     print(verdict)

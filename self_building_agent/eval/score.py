@@ -10,8 +10,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, ROOT)
 
-from groq import Groq
-client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
+from google import genai
+from google.genai import types as genai_types
+_gemini = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
+_MODEL  = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
 
 LOG_FILE = os.path.join("logs", "log.jsonl")
 SKILLS_PY_DIR = "skills_py"
@@ -88,12 +90,11 @@ Score 0, 1, or 2:
 
 Respond with ONLY a JSON object: {{"score": 0|1|2, "reasoning": "one sentence"}}"""
     try:
-        r = client.chat.completions.create(
-            model="qwen/qwen3-32b",
-            max_tokens=200,
-            messages=[{"role": "user", "content": prompt}],
+        r = _gemini.models.generate_content(
+            model=_MODEL, contents=prompt,
+            config=genai_types.GenerateContentConfig(max_output_tokens=200),
         )
-        raw = r.choices[0].message.content.strip()
+        raw = r.text.strip()
         m = re.search(r"\{.*\}", raw, re.DOTALL)
         if m:
             obj = json.loads(m.group())
