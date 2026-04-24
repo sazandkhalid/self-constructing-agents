@@ -6,7 +6,7 @@ tags:
 trigger: when validating message types against a predefined schema or rules
 type: pattern
 version: 1
-success_count: 0
+success_count: 1
 fail_count: 0
 ---
 ---

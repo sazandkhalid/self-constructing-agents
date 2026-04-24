@@ -6,8 +6,8 @@ tags:
 trigger: When importing the FastAPI class in multiple files across the repository.
 type: pattern
 version: 1
-success_count: 1
-fail_count: 0
+success_count: 4
+fail_count: 1
 ---
 ---
 # FastAPI Import Skill

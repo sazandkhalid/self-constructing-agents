@@ -14,12 +14,13 @@ import os
 import re
 import subprocess
 import tempfile
+import time
 
 from google import genai
 from google.genai import types as genai_types
 
 _client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
-_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
 
 
 def _generate_edge_case_tests(skill_code: str, task: str = "") -> str:
@@ -42,18 +43,25 @@ Requirements for your test module:
 6. Use ZERO external dependencies (stdlib only).
 
 Return ONLY the Python code. No markdown fences, no explanation."""
-    try:
-        r = _client.models.generate_content(
-            model=_MODEL,
-            contents=prompt,
-            config=genai_types.GenerateContentConfig(max_output_tokens=1500),
-        )
-        code = r.text.strip()
-        code = re.sub(r"^```\w*\s*", "", code)
-        code = re.sub(r"```\s*$", "", code).strip()
-        return code
-    except Exception as e:
-        return ""
+    for attempt in range(4):
+        try:
+            r = _client.models.generate_content(
+                model=_MODEL,
+                contents=prompt,
+                config=genai_types.GenerateContentConfig(max_output_tokens=1500),
+            )
+            code = r.text.strip()
+            code = re.sub(r"^```\w*\s*", "", code)
+            code = re.sub(r"```\s*$", "", code).strip()
+            return code
+        except Exception as e:
+            msg = str(e)
+            if "503" in msg or "UNAVAILABLE" in msg or "overloaded" in msg.lower():
+                wait = 15 * (2 ** attempt)
+                time.sleep(wait)
+            else:
+                return ""
+    return ""
 
 
 def run_validation(skill_code: str, task: str = "", timeout: int = 20) -> tuple[bool, str]:
@@ -80,7 +88,7 @@ def run_validation(skill_code: str, task: str = "", timeout: int = 20) -> tuple[
         path = f.name
     try:
         result = subprocess.run(
-            ["python3", path], capture_output=True, text=True, timeout=timeout
+            [sys.executable, path], capture_output=True, text=True, timeout=timeout
         )
         stdout = result.stdout or ""
         stderr = result.stderr or ""

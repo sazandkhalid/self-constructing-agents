@@ -1,0 +1,192 @@
+[
+  {
+    "file": "abstract_collections_abc_imports.py",
+    "skill": "abstract_collections_abc_imports",
+    "version": 1,
+    "tags": [
+      "find",
+      "code",
+      "pattern",
+      "repeated",
+      "across"
+    ],
+    "verified": true,
+    "protocol": "general",
+    "rail": "general",
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "build_pacs002_acceptance.py",
+    "skill": "build_pacs002_acceptance",
+    "version": 1,
+    "tags": [
+      "build",
+      "pacs",
+      "payment",
+      "status",
+      "report"
+    ],
+    "verified": true,
+    "protocol": "iso20022",
+    "rail": "swift_mx",
+    "audit_required": true,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "build_pacs008.py",
+    "skill": "build_pacs008",
+    "version": 1,
+    "tags": [
+      "build",
+      "pacs",
+      "message",
+      "write",
+      "python"
+    ],
+    "verified": true,
+    "protocol": "iso20022",
+    "rail": "swift_mx",
+    "audit_required": true,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "create_dependant_object.py",
+    "skill": "create_dependant_object",
+    "version": 1,
+    "tags": [
+      "read",
+      "fastapi",
+      "dependencies",
+      "models",
+      "produce"
+    ],
+    "verified": true,
+    "protocol": null,
+    "rail": null,
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "custom_jsonable_encoder.py",
+    "skill": "custom_jsonable_encoder",
+    "version": 1,
+    "tags": [
+      "look",
+      "fastapi",
+      "encoders",
+      "jsonable_encoder",
+      "produce"
+    ],
+    "verified": true,
+    "protocol": null,
+    "rail": null,
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "dependant_constructor_skill.py",
+    "skill": "dependant_constructor_skill",
+    "version": 1,
+    "tags": [
+      "read",
+      "fastapi",
+      "dependencies",
+      "models",
+      "produce"
+    ],
+    "verified": true,
+    "protocol": null,
+    "rail": null,
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "fetch_eur_gbp_rate.py",
+    "skill": "fetch_eur_gbp_rate",
+    "version": 1,
+    "tags": [
+      "fetch",
+      "current",
+      "exchange",
+      "rate",
+      "from"
+    ],
+    "verified": true,
+    "protocol": null,
+    "rail": null,
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "get_fastapi_init_middleware_attributes.py",
+    "skill": "get_fastapi_init_middleware_attributes",
+    "version": 1,
+    "tags": [
+      "trace",
+      "fastapi",
+      "applications",
+      "__init__",
+      "list"
+    ],
+    "verified": true,
+    "protocol": null,
+    "rail": null,
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "is_async_callable.py",
+    "skill": "is_async_callable",
+    "version": 1,
+    "tags": [
+      "look",
+      "fastapi",
+      "utils",
+      "extract",
+      "small"
+    ],
+    "verified": true,
+    "protocol": null,
+    "rail": null,
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "parse_pain001_fields.py",
+    "skill": "parse_pain001_fields",
+    "version": 1,
+    "tags": [
+      "parse",
+      "this",
+      "pain",
+      "extract",
+      "party"
+    ],
+    "verified": true,
+    "protocol": "iso20022",
+    "rail": "swift_mx",
+    "audit_required": true,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  }
+]

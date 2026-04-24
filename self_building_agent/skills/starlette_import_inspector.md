@@ -6,7 +6,7 @@ tags:
 trigger: when investigating starlette imports in a FastAPI project
 type: pattern
 version: 1
-success_count: 2
+success_count: 6
 fail_count: 0
 ---
 ---

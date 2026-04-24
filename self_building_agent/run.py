@@ -1,6 +1,8 @@
-import os, json, re, yaml, subprocess, tempfile, ast, hashlib, shutil, sys
+import os, json, re, yaml, subprocess, tempfile, ast, hashlib, shutil, sys, time
 from datetime import datetime, timezone
 from collections import deque
+
+PYTHON_BIN = sys.executable  # use the same Python that's running the agent
 from google import genai
 from google.genai import types as genai_types
 
@@ -27,6 +29,7 @@ client = genai.Client(api_key=os.environ.get("GEMINI_API_KEY"))
 class TokenBudget:
     """Tracks estimated Gemini API cost and warns before hitting budget."""
     _PRICING = {  # USD per million tokens (pay-as-you-go; free tier has no cost)
+        "gemini-2.5-flash":      {"input": 0.15, "output": 0.60},
         "gemini-2.0-flash":      {"input": 0.10, "output": 0.40},
         "gemini-2.0-flash-lite": {"input": 0.075, "output": 0.30},
         "gemini-1.5-flash":      {"input": 0.075, "output": 0.30},
@@ -85,9 +88,20 @@ def _llm(messages, max_tokens=2000):
         max_output_tokens=max_tokens,
         system_instruction=system_instruction,
     )
-    r = client.models.generate_content(model=MODEL, contents=contents, config=cfg)
-    budget.record_call()
-    return r.text
+    for attempt in range(4):
+        try:
+            r = client.models.generate_content(model=MODEL, contents=contents, config=cfg)
+            budget.record_call()
+            return r.text
+        except Exception as e:
+            msg = str(e)
+            if "503" in msg or "UNAVAILABLE" in msg or "overloaded" in msg.lower():
+                wait = 15 * (2 ** attempt)
+                print(f"  [retry] 503 overloaded, waiting {wait}s (attempt {attempt+1}/4)...")
+                time.sleep(wait)
+            else:
+                raise
+    raise RuntimeError(f"Gemini API still unavailable after 4 attempts")
 
 # Optional embedding model for semantic skill selection fallback.
 # Loaded lazily so the agent still runs if sentence-transformers isn't installed.
@@ -315,7 +329,7 @@ def execute_code(code):
         f.flush()
         try:
             result = subprocess.run(
-                ['python3', f.name],
+                [PYTHON_BIN, f.name],
                 capture_output=True, text=True, timeout=30
             )
             output = result.stdout
@@ -469,7 +483,7 @@ Do not omit these blocks. Even if you are uncertain, attempt them.
     reply = ""
 
     for i in range(max_iterations):
-        reply = _llm(messages, max_tokens=2000)
+        reply = _llm(messages, max_tokens=8000)
 
         # MCP tool calls take priority over EXECUTE blocks
         try:
@@ -795,7 +809,7 @@ def verify_py_skill(code, timeout=30):
         path = f.name
     try:
         result = subprocess.run(
-            ["python3", path], capture_output=True, text=True, timeout=timeout
+            [PYTHON_BIN, path], capture_output=True, text=True, timeout=timeout
         )
         stdout = result.stdout or ""
         stderr = result.stderr or ""
@@ -931,7 +945,7 @@ Output ONLY a Python file with:
 
 Return only the code."""
     try:
-        code = _llm([{"role": "user", "content": prompt}], max_tokens=1500).strip()
+        code = _llm([{"role": "user", "content": prompt}], max_tokens=6000).strip()
         code = re.sub(r"^```\w*\s*", "", code)
         code = re.sub(r"```\s*$", "", code).strip()
         return code
@@ -961,7 +975,7 @@ Output ONLY the corrected Python module. It must:
 - Print "TEST PASSED" on success
 - Not be wrapped in markdown fences"""
     try:
-        new_code = _llm([{"role": "user", "content": prompt}], max_tokens=1500).strip()
+        new_code = _llm([{"role": "user", "content": prompt}], max_tokens=6000).strip()
         new_code = re.sub(r"^```\w*\s*", "", new_code)
         new_code = re.sub(r"```\s*$", "", new_code).strip()
     except Exception as e:
@@ -1036,7 +1050,7 @@ If composition is not possible, respond with exactly: NO_COMPOSITION
 
 Do not wrap in markdown fences."""
     try:
-        out = _llm([{"role": "user", "content": prompt}], max_tokens=1500).strip()
+        out = _llm([{"role": "user", "content": prompt}], max_tokens=6000).strip()
     except Exception:
         return None, []
 

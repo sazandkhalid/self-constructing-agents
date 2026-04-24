@@ -7,8 +7,8 @@ tags:
 trigger: when formatting or parsing currency amounts in a payment processing system
 type: pattern
 version: 1
-success_count: 0
-fail_count: 0
+success_count: 2
+fail_count: 4
 ---
 ---
 # Currency Formatter

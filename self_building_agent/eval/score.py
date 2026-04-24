@@ -5,7 +5,7 @@ Can be used as a module (imported by run_experiment.py) or as a CLI:
         --out eval/scores_cold.json --target-repo eval/target_repo/iso20022_synthetic \
         --payment-domain
 """
-import os, sys, json, re, ast, subprocess, tempfile, argparse
+import os, sys, json, re, ast, subprocess, tempfile, argparse, time
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, ROOT)
@@ -89,19 +89,26 @@ Score 0, 1, or 2:
 - 2: correct, specific, and grounded in real code from the target codebase
 
 Respond with ONLY a JSON object: {{"score": 0|1|2, "reasoning": "one sentence"}}"""
-    try:
-        r = _gemini.models.generate_content(
-            model=_MODEL, contents=prompt,
-            config=genai_types.GenerateContentConfig(max_output_tokens=200),
-        )
-        raw = r.text.strip()
-        m = re.search(r"\{.*\}", raw, re.DOTALL)
-        if m:
-            obj = json.loads(m.group())
-            return int(obj.get("score", 0)), obj.get("reasoning", "")
-    except Exception as e:
-        return 0, f"judge error: {e}"
-    return 0, "no parse"
+    for attempt in range(4):
+        try:
+            r = _gemini.models.generate_content(
+                model=_MODEL, contents=prompt,
+                config=genai_types.GenerateContentConfig(max_output_tokens=200),
+            )
+            raw = r.text.strip()
+            m = re.search(r"\{.*\}", raw, re.DOTALL)
+            if m:
+                obj = json.loads(m.group())
+                return int(obj.get("score", 0)), obj.get("reasoning", "")
+            return 0, "no parse"
+        except Exception as e:
+            msg = str(e)
+            if "503" in msg or "UNAVAILABLE" in msg or "overloaded" in msg.lower():
+                wait = 15 * (2 ** attempt)
+                time.sleep(wait)
+            else:
+                return 0, f"judge error: {e}"
+    return 0, "judge error: max retries exceeded"
 
 def code_executes(response):
     """Try to extract any python code block and run it. Returns True iff exit 0."""
@@ -119,7 +126,7 @@ def code_executes(response):
         f.write(code)
         path = f.name
     try:
-        r = subprocess.run(["python3", path], capture_output=True, text=True, timeout=15)
+        r = subprocess.run([sys.executable, path], capture_output=True, text=True, timeout=15)
         return r.returncode == 0
     except Exception:
         return False

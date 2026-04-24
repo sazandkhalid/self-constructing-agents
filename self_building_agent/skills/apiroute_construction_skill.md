@@ -7,8 +7,8 @@ tags:
 trigger: when constructing APIRoute instances in FastAPI applications
 type: pattern
 version: 1
-success_count: 1
-fail_count: 0
+success_count: 5
+fail_count: 1
 ---
 ---
 # APIRoute Construction Skill

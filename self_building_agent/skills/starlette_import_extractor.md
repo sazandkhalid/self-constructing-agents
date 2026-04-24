@@ -7,8 +7,8 @@ tags:
 trigger: when analyzing starlette imports in the fastapi repository
 type: pattern
 version: 1
-success_count: 1
-fail_count: 0
+success_count: 12
+fail_count: 6
 ---
 ---
 # Starlette Import Extractor

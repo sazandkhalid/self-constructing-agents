@@ -1,0 +1,1667 @@
+<!DOCTYPE html>
+<!--
+  ISO 20022 Payment Simulation — Agent-Driven Visualization
+  ==========================================================
+  Terminal 1:  cd self_building_agent && python eval/run_payment_simulation.py
+  Terminal 2:  python -m http.server 8080   (from project root)
+  Browser:     http://localhost:8080/self_building_agent/dashboard/payment_simulation.html
+
+  Data source: ../logs/payment_trace.jsonl (auto-refresh every 3s)
+-->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ISO 20022 Payment Simulation :: Agent Visualization</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:       #070b14;
+  --surface:  #0d1424;
+  --surface2: #111827;
+  --border:   rgba(255,255,255,0.08);
+  --border2:  rgba(255,255,255,0.04);
+  --text:     #e2e8f0;
+  --text2:    #94a3b8;
+  --text3:    #475569;
+  --blue:     rgba(59,130,246,0.2);
+  --blue2:    #60a5fa;
+  --green:    rgba(34,197,94,0.15);
+  --green2:   #4ade80;
+  --amber:    rgba(245,158,11,0.15);
+  --amber2:   #fbbf24;
+  --red:      rgba(239,68,68,0.15);
+  --red2:     #f87171;
+  --purple:   rgba(168,85,247,0.15);
+  --purple2:  #c084fc;
+  --cyan:     rgba(6,182,212,0.15);
+  --cyan2:    #22d3ee;
+  --mono:     'IBM Plex Mono', monospace;
+  --sans:     'IBM Plex Sans', sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  height: 100vh;
+  overflow: hidden;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(rgba(59,130,246,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59,130,246,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ─── App shell ─── */
+.app {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-rows: 52px auto 1fr 48px;
+  height: 100vh;
+  gap: 0;
+}
+
+/* ─── Header ─── */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.header-left { display: flex; align-items: center; gap: 12px; }
+
+.header-title {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.5px;
+}
+
+.header-title span { color: var(--text3); font-weight: 400; }
+
+.live-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid rgba(74,222,128,0.3);
+  border-radius: 3px;
+  background: rgba(34,197,94,0.08);
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--green2);
+  letter-spacing: 1px;
+}
+
+.live-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green2);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 4px var(--green2); }
+  50% { opacity: 0.4; box-shadow: none; }
+}
+
+.live-dot.active { animation: pulse 2s ease-in-out infinite; }
+
+/* ─── Scenario strip ─── */
+.scenario-strip {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+}
+
+.scenario-party {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.scenario-party.right { text-align: right; }
+
+.party-name {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.party-meta {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+}
+
+.scenario-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.scenario-amount {
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--blue2);
+  white-space: nowrap;
+}
+
+.scenario-arrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  letter-spacing: 2px;
+}
+
+/* ─── Main grid ─── */
+.main-grid {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ─── Step list ─── */
+.step-list-panel {
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  background: var(--surface);
+}
+
+.step-list-panel::-webkit-scrollbar { width: 4px; }
+.step-list-panel::-webkit-scrollbar-track { background: transparent; }
+.step-list-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+#stepList { padding: 8px; display: flex; flex-direction: column; gap: 2px; }
+
+.step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border: 1px solid transparent;
+}
+
+.step-item:hover { background: var(--surface2); }
+
+.step-item.active {
+  background: rgba(59,130,246,0.08);
+  border-color: rgba(59,130,246,0.2);
+}
+
+.step-item.complete .step-num { background: rgba(34,197,94,0.15); color: var(--green2); border-color: rgba(74,222,128,0.3); }
+.step-item.active .step-num { background: rgba(59,130,246,0.15); color: var(--blue2); border-color: rgba(96,165,250,0.3); }
+
+.step-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.step-info { flex: 1; min-width: 0; }
+
+.step-name {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.step-desc {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─── Right panel ─── */
+.right-panel {
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.right-panel::-webkit-scrollbar { width: 4px; }
+.right-panel::-webkit-scrollbar-track { background: transparent; }
+.right-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ─── Section card ─── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border2);
+  background: var(--surface2);
+}
+
+.card-title {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text3);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* ─── Flow diagram ─── */
+#flowDiagram {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0;
+  position: relative;
+}
+
+.flow-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  z-index: 1;
+}
+
+.flow-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.flow-icon.active {
+  border-color: rgba(96,165,250,0.5);
+  background: rgba(59,130,246,0.1);
+  box-shadow: 0 0 12px rgba(59,130,246,0.2);
+}
+
+.flow-icon.complete {
+  border-color: rgba(74,222,128,0.4);
+  background: rgba(34,197,94,0.08);
+}
+
+.flow-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text3);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.flow-label.active { color: var(--blue2); }
+.flow-label.complete { color: var(--green2); }
+
+.flow-edge {
+  flex: 1;
+  height: 2px;
+  background: var(--border);
+  margin: 0 -2px;
+  position: relative;
+  overflow: hidden;
+}
+
+.flow-edge.active { background: rgba(59,130,246,0.3); }
+.flow-edge.complete { background: rgba(74,222,128,0.3); }
+
+@keyframes packet {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+
+.flow-packet {
+  position: absolute;
+  top: -2px;
+  left: 0;
+  width: 20px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--blue2);
+  box-shadow: 0 0 8px var(--blue2);
+  animation: packet 1.5s ease-in-out infinite;
+  display: none;
+}
+
+.flow-edge.active .flow-packet { display: block; }
+
+/* ─── Message card ─── */
+#messageCard { }
+
+.msg-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border2);
+  background: var(--surface2);
+}
+
+.msg-badge-wrap { display: flex; align-items: center; gap: 8px; flex: 1; }
+
+#msgBadge {
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+
+#msgLabel {
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--text2);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#msgTimestamp {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  white-space: nowrap;
+}
+
+#messageBody {
+  padding: 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--text2);
+  white-space: pre-wrap;
+  word-break: break-all;
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+#messageBody::-webkit-scrollbar { width: 4px; }
+#messageBody::-webkit-scrollbar-thumb { background: var(--border); }
+
+.xml-tag  { color: var(--blue2); }
+.xml-val  { color: var(--green2); }
+.xml-amount { color: var(--amber2); }
+.xml-comment { color: var(--text3); font-style: italic; }
+
+/* ─── Info grid ─── */
+.info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 12px;
+}
+
+/* ─── TX State card ─── */
+#txState { }
+
+.tx-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border2);
+}
+
+.tx-cell {
+  background: var(--surface);
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tx-label {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.tx-value {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.tx-value.blue  { color: var(--blue2); }
+.tx-value.green { color: var(--green2); }
+.tx-value.amber { color: var(--amber2); }
+
+/* ─── Compliance state ─── */
+#complianceState { }
+
+.comp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border2);
+}
+
+.comp-cell {
+  background: var(--surface);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.comp-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text2);
+}
+
+.comp-status {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 2px;
+}
+
+.comp-status.pass  { color: var(--green2); background: rgba(34,197,94,0.1); }
+.comp-status.queued { color: var(--text3); background: var(--surface2); }
+.comp-status.warn  { color: var(--amber2); background: rgba(245,158,11,0.1); }
+
+/* ─── Skills list ─── */
+#skillList { padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 6px; min-height: 36px; }
+
+.skill-chip {
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-family: var(--mono);
+  font-size: 10px;
+  border: 1px solid rgba(96,165,250,0.25);
+  background: rgba(59,130,246,0.08);
+  color: var(--blue2);
+}
+
+.skill-chip.new {
+  border-color: rgba(74,222,128,0.3);
+  background: rgba(34,197,94,0.08);
+  color: var(--green2);
+}
+
+.skill-chip.empty {
+  color: var(--text3);
+  border-color: var(--border);
+  background: transparent;
+  font-style: italic;
+}
+
+/* ─── Log feed ─── */
+#logEntries {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 120px;
+  overflow-y: auto;
+  font-family: var(--mono);
+  font-size: 10px;
+}
+
+#logEntries::-webkit-scrollbar { width: 3px; }
+#logEntries::-webkit-scrollbar-thumb { background: var(--border); }
+
+.log-entry { display: flex; gap: 8px; align-items: flex-start; }
+.log-time { color: var(--text3); white-space: nowrap; flex-shrink: 0; }
+.log-icon { flex-shrink: 0; }
+.log-msg { color: var(--text2); word-break: break-word; }
+.log-entry.pass .log-msg { color: var(--green2); }
+.log-entry.warn .log-msg { color: var(--amber2); }
+.log-entry.error .log-msg { color: var(--red2); }
+
+/* ─── Result panel ─── */
+#resultPanel {
+  border: 1px solid rgba(74,222,128,0.3);
+  background: rgba(34,197,94,0.05);
+  border-radius: 6px;
+  padding: 16px;
+  display: none;
+}
+
+#resultPanel.visible { display: block; }
+
+.result-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.result-badge {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--green2);
+  padding: 3px 10px;
+  border: 1px solid rgba(74,222,128,0.4);
+  border-radius: 3px;
+  background: rgba(34,197,94,0.1);
+}
+
+#resultSubtitle {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+}
+
+#resultStats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.stat-cell {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px;
+  text-align: center;
+}
+
+.stat-val {
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--green2);
+}
+
+.stat-lbl {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text3);
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ─── Toolbar ─── */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.btn {
+  padding: 5px 14px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text2);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.btn:hover { border-color: var(--blue2); color: var(--blue2); background: rgba(59,130,246,0.08); }
+.btn.primary { border-color: rgba(96,165,250,0.4); color: var(--blue2); background: rgba(59,130,246,0.1); }
+.btn.primary:hover { background: rgba(59,130,246,0.2); }
+
+.btn-secondary { }
+
+.speed-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+}
+
+input[type=range] {
+  width: 80px;
+  accent-color: var(--blue2);
+}
+
+.progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+}
+
+#progressLabel {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  white-space: nowrap;
+}
+
+.progress-bar {
+  width: 120px;
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+#progressFill {
+  height: 100%;
+  background: var(--blue2);
+  border-radius: 2px;
+  transition: width 0.5s ease;
+  width: 0%;
+}
+
+#progressPct {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--blue2);
+  width: 32px;
+}
+
+#liveIndicator {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--green2);
+  padding: 0 6px;
+}
+
+#liveIndicatorDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green2);
+  animation: pulse 2s infinite;
+}
+
+/* Waiting state */
+.waiting-msg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 16px;
+  padding: 40px;
+}
+
+.waiting-title {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--text3);
+  text-align: center;
+}
+
+.waiting-code {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+  line-height: 1.8;
+  text-align: left;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 16px;
+  white-space: pre;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--border);
+  border-top-color: var(--blue2);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <div class="header-title">
+        ISO 20022 PAYMENT SIMULATION
+        <span>// agent-driven visualization</span>
+      </div>
+      <div class="live-badge">
+        <span class="live-dot" id="liveDot"></span>
+        <span id="liveStatus">DEMO MODE</span>
+      </div>
+    </div>
+    <div style="font-family:var(--mono);font-size:10px;color:var(--text3)" id="refreshStatus">
+      auto-refresh every 3s
+    </div>
+  </header>
+
+  <!-- Scenario strip -->
+  <div class="scenario-strip">
+    <div class="scenario-party">
+      <div class="party-name">Meridian Ltd</div>
+      <div class="party-meta">GB29NWBK60161331926819 · London, GB</div>
+      <div class="party-meta" style="color:var(--text3);margin-top:2px">via NatWest Bank plc · NWBKGB2L</div>
+    </div>
+    <div class="scenario-center">
+      <div class="scenario-amount">€47,832.50</div>
+      <div class="scenario-arrow">— — — — ▶ — — — —</div>
+      <div style="font-family:var(--mono);font-size:9px;color:var(--text3)">E2E-INV-2025-0847</div>
+    </div>
+    <div class="scenario-party right">
+      <div class="party-name">Fischer GmbH</div>
+      <div class="party-meta">DE89370400440532013000 · Frankfurt, DE</div>
+      <div class="party-meta" style="color:var(--text3);margin-top:2px">via Deutsche Bank · DEUTDEDB</div>
+    </div>
+  </div>
+
+  <!-- Main grid -->
+  <div class="main-grid">
+
+    <!-- Step list -->
+    <div class="step-list-panel">
+      <div id="stepList"></div>
+    </div>
+
+    <!-- Right panel -->
+    <div class="right-panel">
+
+      <!-- Flow diagram -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">PAYMENT FLOW</span>
+          <span id="flowStatus" style="font-family:var(--mono);font-size:10px;color:var(--text3)">—</span>
+        </div>
+        <div id="flowDiagram">
+          <div class="flow-node" id="fn0">
+            <div class="flow-icon" id="fi0">🏢</div>
+            <div class="flow-label" id="fl0">ERP / Meridian</div>
+          </div>
+          <div class="flow-edge" id="fe0"><div class="flow-packet"></div></div>
+          <div class="flow-node" id="fn1">
+            <div class="flow-icon" id="fi1">🏦</div>
+            <div class="flow-label" id="fl1">NatWest</div>
+          </div>
+          <div class="flow-edge" id="fe1"><div class="flow-packet"></div></div>
+          <div class="flow-node" id="fn2">
+            <div class="flow-icon" id="fi2">⚡</div>
+            <div class="flow-label" id="fl2">SWIFT MX</div>
+          </div>
+          <div class="flow-edge" id="fe2"><div class="flow-packet"></div></div>
+          <div class="flow-node" id="fn3">
+            <div class="flow-icon" id="fi3">🏛</div>
+            <div class="flow-label" id="fl3">Deutsche Bank</div>
+          </div>
+          <div class="flow-edge" id="fe3"><div class="flow-packet"></div></div>
+          <div class="flow-node" id="fn4">
+            <div class="flow-icon" id="fi4">🏭</div>
+            <div class="flow-label" id="fl4">Fischer GmbH</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Message card -->
+      <div class="card" id="messageCard">
+        <div class="msg-header">
+          <div class="msg-badge-wrap">
+            <span id="msgBadge" style="background:rgba(168,85,247,0.15);color:#c084fc;border:1px solid rgba(192,132,252,0.3)">pain.001</span>
+            <span id="msgLabel">Customer Credit Transfer Initiation</span>
+          </div>
+          <span id="msgTimestamp">—</span>
+        </div>
+        <pre id="messageBody"><span style="color:var(--text3)">// Run the simulation first:
+// python eval/run_payment_simulation.py
+//
+// Then open this file via:
+// python -m http.server 8080
+// (from project root / self_building_agent dir)
+//
+// The visualization auto-updates every 3s.</span></pre>
+      </div>
+
+      <!-- TX state + Compliance -->
+      <div class="info-grid">
+        <div class="card" id="txState">
+          <div class="card-header"><span class="card-title">TRANSACTION STATE</span></div>
+          <div class="tx-grid">
+            <div class="tx-cell">
+              <div class="tx-label">Status</div>
+              <div class="tx-value blue" id="txStatusVal">INITIATED</div>
+            </div>
+            <div class="tx-cell">
+              <div class="tx-label">E2E Reference</div>
+              <div class="tx-value" id="txE2eVal" style="font-size:10px">E2E-INV-2025-0847</div>
+            </div>
+            <div class="tx-cell">
+              <div class="tx-label">Amount</div>
+              <div class="tx-value amber" id="txAmountVal">€47,832.50</div>
+            </div>
+            <div class="tx-cell">
+              <div class="tx-label">FX Rate</div>
+              <div class="tx-value" id="txFxVal">—</div>
+            </div>
+            <div class="tx-cell" style="grid-column:span 2">
+              <div class="tx-label">Settlement</div>
+              <div class="tx-value" id="txSettleVal" style="color:var(--amber2)">T+0 target</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" id="complianceState">
+          <div class="card-header"><span class="card-title">COMPLIANCE CHECKS</span></div>
+          <div class="comp-grid">
+            <div class="comp-cell">
+              <span class="comp-label">OFAC Screen</span>
+              <span class="comp-status queued" id="compOfac">QUEUED</span>
+            </div>
+            <div class="comp-cell">
+              <span class="comp-label">AML Check</span>
+              <span class="comp-status queued" id="compAml">QUEUED</span>
+            </div>
+            <div class="comp-cell">
+              <span class="comp-label">IBAN Valid</span>
+              <span class="comp-status queued" id="compIban">QUEUED</span>
+            </div>
+            <div class="comp-cell">
+              <span class="comp-label">Address Format</span>
+              <span class="comp-status queued" id="compAddr">QUEUED</span>
+            </div>
+            <div class="comp-cell" style="grid-column:span 2">
+              <span class="comp-label">Sanctions DB</span>
+              <span class="comp-status queued" id="compSanc">QUEUED</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Skills -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">SKILLS ACTIVATED</span></div>
+        <div id="skillList">
+          <span class="skill-chip empty">no skills loaded</span>
+        </div>
+      </div>
+
+      <!-- Log -->
+      <div class="card">
+        <div class="card-header"><span class="card-title">AGENT LOG</span></div>
+        <div id="logEntries">
+          <div class="log-entry">
+            <span class="log-time">--:--:--</span>
+            <span class="log-icon">○</span>
+            <span class="log-msg">Waiting for simulation...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Result panel -->
+      <div id="resultPanel">
+        <div class="result-header">
+          <span class="result-badge">PAYMENT COMPLETE</span>
+          <span id="resultSubtitle">Invoice INV-2025-0847 — Fischer GmbH received €47,832.50</span>
+        </div>
+        <div id="resultStats">
+          <div class="stat-cell">
+            <div class="stat-val" id="statSkills">—</div>
+            <div class="stat-lbl">Skills Saved</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-val" id="statTools">—</div>
+            <div class="stat-lbl">Tool Calls</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-val" id="statDuration">—</div>
+            <div class="stat-lbl">Duration</div>
+          </div>
+          <div class="stat-cell">
+            <div class="stat-val" id="statE2e" style="font-size:9px;padding-top:4px">—</div>
+            <div class="stat-lbl">E2E ID</div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /right-panel -->
+  </div><!-- /main-grid -->
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <button class="btn primary" id="startBtn" onclick="startDemo()">▶ Run Simulation</button>
+    <button class="btn btn-secondary" id="resetBtn" onclick="resetDemo()">↺ Reset</button>
+    <button class="btn btn-secondary" id="replayBtn" onclick="replayFromTrace()" style="display:none">
+      ↺ Replay from trace
+    </button>
+    <span id="liveIndicator">
+      <span id="liveIndicatorDot"></span>
+      LIVE — reading from agent
+    </span>
+
+    <div class="progress-wrap">
+      <span id="progressLabel">STEP 0/8</span>
+      <div class="progress-bar"><div id="progressFill"></div></div>
+      <span id="progressPct">0%</span>
+    </div>
+
+    <div class="speed-wrap">
+      SPEED
+      <input type="range" id="speedSlider" min="1" max="5" value="2" oninput="updateSpeed(this.value)">
+      <span id="speedLabel">2×</span>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<script>
+// ─── Hardcoded fallback data ───────────────────────────────────────────────
+
+const FLOW_NODES = ['ERP / Meridian','NatWest','SWIFT MX','Deutsche Bank','Fischer GmbH'];
+const FLOW_EDGES = 4;
+
+const ALL_SKILLS = [
+  'parse_pain001_fields','validate_iban','screen_parties','fetch_eur_gbp_rate',
+  'build_pacs008','build_pacs002_acceptance','build_camt054_notification','reconcile_payment_chain'
+];
+
+const STEPS_FALLBACK = [
+  {
+    step_number:1, step_id:'parse_pain001',
+    step_title:'Payment Initiated', step_subtitle:'ERP generates instruction',
+    message_type:'pain.001.001.09', message_label:'Customer Credit Transfer Initiation',
+    tag:'pain.001', tag_color:'rgba(168,85,247,0.15)', tag_text:'#c084fc',
+    flow_node:0, flow_edge:0,
+    message_content:`<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pain.001.001.09">
+  <CstmrCdtTrfInitn>
+    <GrpHdr>
+      <MsgId>MERIDIAN-20251119-001</MsgId>
+      <CreDtTm>2025-11-19T09:30:00Z</CreDtTm>
+      <NbOfTxs>1</NbOfTxs>
+      <CtrlSum>47832.50</CtrlSum>
+    </GrpHdr>
+    <PmtInf>
+      <Dbtr><Nm>Meridian Ltd</Nm></Dbtr>
+      <DbtrAcct><Id><IBAN>GB29NWBK60161331926819</IBAN></Id></DbtrAcct>
+      <CdtTrfTxInf>
+        <EndToEndId>E2E-INV-2025-0847</EndToEndId>
+        <Amt><InstdAmt Ccy="EUR">47832.50</InstdAmt></Amt>
+        <Cdtr><Nm>Fischer GmbH</Nm></Cdtr>
+        <CdtrAcct><Id><IBAN>DE89370400440532013000</IBAN></Id></CdtrAcct>
+      </CdtTrfTxInf>
+    </PmtInf>
+  </CstmrCdtTrfInitn>
+</Document>`,
+    skills_activated:['parse_pain001_fields'], skills_saved:[],
+    tx_status:'INITIATED', tx_e2e_id:'E2E-INV-2025-0847', tx_amount:'€47,832.50',
+    tx_fx_rate:'—', tx_settlement:'T+0 target',
+    ofac_screen:'QUEUED', aml_check:'QUEUED', iban_valid:'QUEUED', address_format:'QUEUED', sanctions_db:'QUEUED',
+    logs:[{time:'09:30:00',type:'check',msg:'pain.001 received — parsing fields'},
+          {time:'09:30:01',type:'pass',msg:'All 12 fields extracted successfully'}],
+    timestamp:'2025-11-19T09:30:01Z', duration_ms:1200, skill_verified:true, task_success:true,
+  },
+  {
+    step_number:2, step_id:'validate_iban',
+    step_title:'IBAN Validation', step_subtitle:'MOD-97 checksum verification',
+    message_type:'VALIDATION', message_label:'IBAN MOD-97 Checksum Validation',
+    tag:'VALIDATE', tag_color:'rgba(245,158,11,0.15)', tag_text:'#fbbf24',
+    flow_node:1, flow_edge:1,
+    message_content:`// IBAN Validation Results
+// ─────────────────────────────────
+// DE89370400440532013000
+//   valid: true
+//   country: DE
+//   check_digits: 89
+//   bank_code: 37040044
+//   mod97_result: 1  ✓
+//
+// GB29NWBK60161331926819
+//   valid: true
+//   country: GB
+//   check_digits: 29
+//   bank_code: NWBK
+//   mod97_result: 1  ✓`,
+    skills_activated:['validate_iban'], skills_saved:['validate_iban'],
+    tx_status:'VALIDATING', tx_e2e_id:'E2E-INV-2025-0847', tx_amount:'€47,832.50',
+    tx_fx_rate:'—', tx_settlement:'T+0 target',
+    ofac_screen:'QUEUED', aml_check:'QUEUED', iban_valid:'PASS ✓', address_format:'PASS ✓', sanctions_db:'QUEUED',
+    logs:[{time:'09:30:02',type:'check',msg:'Validating DE89370400440532013000'},
+          {time:'09:30:02',type:'pass',msg:'MOD-97 result: 1 — VALID'},
+          {time:'09:30:02',type:'pass',msg:'Validating GB29NWBK60161331926819 — VALID'}],
+    timestamp:'2025-11-19T09:30:02Z', duration_ms:800, skill_verified:true, task_success:true,
+  },
+  {
+    step_number:3, step_id:'sanctions_screen',
+    step_title:'Sanctions & AML Screening', step_subtitle:'OFAC + transaction monitoring',
+    message_type:'COMPLIANCE', message_label:'OFAC Sanctions + AML Transaction Monitoring',
+    tag:'COMPLIANCE', tag_color:'rgba(239,68,68,0.15)', tag_text:'#f87171',
+    flow_node:1, flow_edge:1,
+    message_content:`// Sanctions Screening — APPROVED
+// ─────────────────────────────────
+// Parties checked: 4
+// High-risk countries: IR, KP, SY, CU, RU, BY
+// Sanctioned fragments: al-qaeda, isis, daesh, hamas, hezbollah
+//
+// Meridian Ltd (GB)    → CLEAR
+// Fischer GmbH (DE)    → CLEAR
+// NatWest Bank plc (GB)→ CLEAR
+// Deutsche Bank AG (DE)→ CLEAR
+//
+// Matches: []
+// Risk score: 0/100
+// Decision: APPROVE`,
+    skills_activated:['screen_parties'], skills_saved:['screen_parties'],
+    tx_status:'SCREENING', tx_e2e_id:'E2E-INV-2025-0847', tx_amount:'€47,832.50',
+    tx_fx_rate:'—', tx_settlement:'T+0 target',
+    ofac_screen:'PASS ✓', aml_check:'PASS ✓', iban_valid:'PASS ✓', address_format:'PASS ✓', sanctions_db:'PASS ✓',
+    logs:[{time:'09:30:03',type:'check',msg:'OFAC screening 4 parties'},
+          {time:'09:30:03',type:'pass',msg:'All parties cleared — risk score: 0'},
+          {time:'09:30:03',type:'pass',msg:'Decision: APPROVE'}],
+    timestamp:'2025-11-19T09:30:03Z', duration_ms:950, skill_verified:true, task_success:true,
+  },
+  {
+    step_number:4, step_id:'fx_rate',
+    step_title:'FX Rate & Settlement Amount', step_subtitle:'Live ECB rate via MCP tool',
+    message_type:'MCP:fx_rate', message_label:'Live FX Rate — ECB Frankfurt API',
+    tag:'MCP TOOL', tag_color:'rgba(6,182,212,0.15)', tag_text:'#22d3ee',
+    flow_node:2, flow_edge:2,
+    message_content:`// FX Rate — ECB Frankfurt API
+// https://api.frankfurter.app/latest?from=EUR&to=GBP
+// ─────────────────────────────────
+// from_currency: EUR
+// to_currency:   GBP
+// rate:          0.8530
+// date:          2025-11-19
+// source:        api.frankfurter.app
+//
+// Settlement calculation:
+// EUR 47,832.50 × 0.8530 = GBP 40,802.18
+//
+// audit_required: true`,
+    skills_activated:['fetch_eur_gbp_rate'], skills_saved:['fetch_eur_gbp_rate'],
+    tx_status:'FX CONFIRMED', tx_e2e_id:'E2E-INV-2025-0847', tx_amount:'€47,832.50',
+    tx_fx_rate:'0.8530 GBP/EUR', tx_settlement:'GBP 40,802.18',
+    ofac_screen:'PASS ✓', aml_check:'PASS ✓', iban_valid:'PASS ✓', address_format:'PASS ✓', sanctions_db:'PASS ✓',
+    logs:[{time:'09:30:04',type:'check',msg:'MCP tool: fetch_eur_gbp_rate()'},
+          {time:'09:30:04',type:'pass',msg:'Rate: 0.8530 GBP/EUR (ECB live)'},
+          {time:'09:30:04',type:'pass',msg:'Settlement: GBP 40,802.18'}],
+    timestamp:'2025-11-19T09:30:04Z', duration_ms:1100, skill_verified:true, task_success:true,
+  },
+  {
+    step_number:5, step_id:'build_pacs008',
+    step_title:'SWIFT pacs.008 Constructed', step_subtitle:'NatWest → Deutsche Bank',
+    message_type:'pacs.008.001.08', message_label:'FI to FI Customer Credit Transfer — SWIFT MX',
+    tag:'pacs.008', tag_color:'rgba(59,130,246,0.15)', tag_text:'#60a5fa',
+    flow_node:3, flow_edge:3,
+    message_content:`<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.008.001.08">
+  <FIToFICstmrCdtTrf>
+    <GrpHdr>
+      <MsgId>SWIFT-MERIDIAN-20251119-001</MsgId>
+      <NbOfTxs>1</NbOfTxs>
+      <SttlmInf><SttlmMtd>CLSS</SttlmMtd></SttlmInf>
+    </GrpHdr>
+    <CdtTrfTxInf>
+      <PmtId>
+        <EndToEndId>E2E-INV-2025-0847</EndToEndId>
+        <TxId>TXN-20251119-001</TxId>
+      </PmtId>
+      <IntrBkSttlmAmt Ccy="EUR">47832.50</IntrBkSttlmAmt>
+      <ChrgBr>SHA</ChrgBr>
+      <DbtrAgt><FinInstnId><BICFI>NWBKGB2L</BICFI></FinInstnId></DbtrAgt>
+      <Dbtr><Nm>Meridian Ltd</Nm></Dbtr>
+      <DbtrAcct><Id><IBAN>GB29NWBK60161331926819</IBAN></Id></DbtrAcct>
+      <CdtrAgt><FinInstnId><BICFI>DEUTDEDB</BICFI></FinInstnId></CdtrAgt>
+      <Cdtr><Nm>Fischer GmbH</Nm></Cdtr>
+      <CdtrAcct><Id><IBAN>DE89370400440532013000</IBAN></Id></CdtrAcct>
+    </CdtTrfTxInf>
+  </FIToFICstmrCdtTrf>
+</Document>`,
+    skills_activated:['build_pacs008'], skills_saved:['build_pacs008'],
+    tx_status:'IN TRANSIT', tx_e2e_id:'E2E-INV-2025-0847', tx_amount:'€47,832.50',
+    tx_fx_rate:'0.8530 GBP/EUR', tx_settlement:'GBP 40,802.18',
+    ofac_screen:'PASS ✓', aml_check:'PASS ✓', iban_valid:'PASS ✓', address_format:'PASS ✓', sanctions_db:'PASS ✓',
+    logs:[{time:'09:30:05',type:'check',msg:'Building pacs.008.001.08'},
+          {time:'09:30:05',type:'pass',msg:'XML parseable — E2E-INV-2025-0847 present'},
+          {time:'09:30:05',type:'pass',msg:'Skill saved: build_pacs008'}],
+    timestamp:'2025-11-19T09:30:05Z', duration_ms:1400, skill_verified:true, task_success:true,
+  },
+  {
+    step_number:6, step_id:'build_pacs002',
+    step_title:'Deutsche Bank Receives & Accepts', step_subtitle:'pacs.002 status report issued',
+    message_type:'pacs.002.001.10', message_label:'Payment Status Report — Deutsche Bank → NatWest',
+    tag:'pacs.002', tag_color:'rgba(34,197,94,0.15)', tag_text:'#4ade80',
+    flow_node:4, flow_edge:4,
+    message_content:`<Document xmlns="urn:iso:std:iso:20022:tech:xsd:pacs.002.001.10">
+  <FIToFIPmtStsRpt>
+    <GrpHdr>
+      <MsgId>ACK-MERIDIAN-20251119-001</MsgId>
+    </GrpHdr>
+    <TxInfAndSts>
+      <OrgnlEndToEndId>E2E-INV-2025-0847</OrgnlEndToEndId>
+      <OrgnlTxId>TXN-20251119-001</OrgnlTxId>
+      <TxSts>ACCP</TxSts>
+      <AccptncDtTm>2025-11-19T09:30:06Z</AccptncDtTm>
+      <SttlmInf>
+        <SttlmDt>2025-11-19</SttlmDt>
+        <SttlmAmt Ccy="EUR">47832.50</SttlmAmt>
+      </SttlmInf>
+    </TxInfAndSts>
+  </FIToFIPmtStsRpt>
+</Document>`,
+    skills_activated:['build_pacs002_acceptance'], skills_saved:['build_pacs002_acceptance'],
+    tx_status:'ACCEPTED ✓', tx_e2e_id:'E2E-INV-2025-0847', tx_amount:'€47,832.50',
+    tx_fx_rate:'0.8530 GBP/EUR', tx_settlement:'SETTLED ✓',
+    ofac_screen:'PASS ✓', aml_check:'PASS ✓', iban_valid:'PASS ✓', address_format:'PASS ✓', sanctions_db:'PASS ✓',
+    logs:[{time:'09:30:06',type:'check',msg:'Deutsche Bank: building pacs.002 acceptance'},
+          {time:'09:30:06',type:'pass',msg:'TxSts: ACCP — transaction accepted'},
+          {time:'09:30:06',type:'pass',msg:'OrgnlEndToEndId matches'}],
+    timestamp:'2025-11-19T09:30:06Z', duration_ms:1050, skill_verified:true, task_success:true,
+  },
+  {
+    step_number:7, step_id:'build_camt054',
+    step_title:'Beneficiary Notified', step_subtitle:'camt.054 debit/credit notification',
+    message_type:'camt.054.001.08', message_label:'Bank to Customer Debit Credit Notification',
+    tag:'camt.054', tag_color:'rgba(34,197,94,0.15)', tag_text:'#4ade80',
+    flow_node:4, flow_edge:4,
+    message_content:`<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.054.001.08">
+  <BkToCstmrDbtCdtNtfctn>
+    <GrpHdr>
+      <MsgId>NTFN-20251119-001</MsgId>
+    </GrpHdr>
+    <Ntfctn>
+      <Acct><Id><IBAN>DE89370400440532013000</IBAN></Id></Acct>
+      <Ntry>
+        <Amt Ccy="EUR">47832.50</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Sts><Cd>BOOK</Cd></Sts>
+        <BookgDt><Dt>2025-11-19</Dt></BookgDt>
+        <NtryDtls>
+          <TxDtls>
+            <Refs><EndToEndId>E2E-INV-2025-0847</EndToEndId></Refs>
+            <RltdPties><Dbtr><Pty><Nm>Meridian Ltd</Nm></Pty></Dbtr></RltdPties>
+            <RmtInf><Ustrd>Invoice INV-2025-0847 industrial components</Ustrd></RmtInf>
+          </TxDtls>
+        </NtryDtls>
+      </Ntry>
+    </Ntfctn>
+  </BkToCstmrDbtCdtNtfctn>
+</Document>`,
+    skills_activated:['build_camt054_notification'], skills_saved:['build_camt054_notification'],
+    tx_status:'SETTLED ✓', tx_e2e_id:'E2E-INV-2025-0847', tx_amount:'€47,832.50',
+    tx_fx_rate:'0.8530 GBP/EUR', tx_settlement:'BOOKED ✓',
+    ofac_screen:'PASS ✓', aml_check:'PASS ✓', iban_valid:'PASS ✓', address_format:'PASS ✓', sanctions_db:'PASS ✓',
+    logs:[{time:'09:30:07',type:'check',msg:'Deutsche Bank → Fischer GmbH: camt.054'},
+          {time:'09:30:07',type:'pass',msg:'CdtDbtInd: CRDT — credit notification sent'},
+          {time:'09:30:07',type:'pass',msg:'IBAN DE89370400440532013000 confirmed'}],
+    timestamp:'2025-11-19T09:30:07Z', duration_ms:1300, skill_verified:true, task_success:true,
+  },
+  {
+    step_number:8, step_id:'reconcile',
+    step_title:'Reconciliation', step_subtitle:'Invoice matched — payment complete',
+    message_type:'RECONCILIATION', message_label:'Cross-Message Reconciliation Report',
+    tag:'RECONCILE', tag_color:'rgba(34,197,94,0.15)', tag_text:'#4ade80',
+    flow_node:4, flow_edge:4,
+    message_content:`// Reconciliation Report — PAYMENT CHAIN VALID
+// ─────────────────────────────────────────────
+// e2e_id:             E2E-INV-2025-0847
+// total_messages:     4
+// matched:            4
+// unmatched:          0
+// amount_discrepancy: 0.00
+// currency:           EUR
+//
+// chain_valid:        true
+// verdict:            All messages share E2E-INV-2025-0847
+//                     Amounts consistent: EUR 47,832.50
+//
+// invoice_status:     PAID
+//
+// Chain: pain.001 → pacs.008 → pacs.002 → camt.054 ✓`,
+    skills_activated:['reconcile_payment_chain'], skills_saved:['reconcile_payment_chain'],
+    tx_status:'COMPLETE ✓', tx_e2e_id:'E2E-INV-2025-0847', tx_amount:'€47,832.50',
+    tx_fx_rate:'0.8530 GBP/EUR', tx_settlement:'RECONCILED ✓',
+    ofac_screen:'PASS ✓', aml_check:'PASS ✓', iban_valid:'PASS ✓', address_format:'PASS ✓', sanctions_db:'PASS ✓',
+    logs:[{time:'09:30:08',type:'check',msg:'Reconciling 4-message chain'},
+          {time:'09:30:08',type:'pass',msg:'chain_valid: true — 0 discrepancies'},
+          {time:'09:30:08',type:'pass',msg:'invoice_status: PAID'}],
+    timestamp:'2025-11-19T09:30:08Z', duration_ms:900, skill_verified:true, task_success:true,
+  },
+];
+
+// ─── State ────────────────────────────────────────────────────────────────
+
+let steps = [];            // loaded steps (trace or fallback)
+let currentStep = 0;
+let animTimer = null;
+let refreshTimer = null;
+let traceSteps = [];       // steps from trace file
+let usingTrace = false;
+let speedMs = 1500;        // ms between demo steps
+let lastTraceLen = 0;
+
+// ─── Syntax highlighting ─────────────────────────────────────────────────
+
+function highlightContent(content) {
+  if (!content) return '<span style="color:var(--text3)">// No output captured</span>';
+  let h = content
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  h = h.replace(/(&lt;\/?[\w.:\s]+(?:\s[^&]*)?\/?\s*&gt;)/g,
+      '<span class="xml-tag">$1</span>');
+  h = h.replace(/"([^"]+)"/g, '"<span class="xml-val">$1</span>"');
+  h = h.replace(/\b(\d+\.\d+)\b/g, '<span class="xml-amount">$1</span>');
+  h = h.replace(/(\/\/[^\n]*)/g, '<span class="xml-comment">$1</span>');
+  return h;
+}
+
+// ─── Compliance status helper ─────────────────────────────────────────────
+
+function compClass(val) {
+  if (!val) return 'queued';
+  const v = val.toLowerCase();
+  if (v.includes('✓') || v.includes('pass')) return 'pass';
+  if (v.includes('warn')) return 'warn';
+  return 'queued';
+}
+
+// ─── Render functions ────────────────────────────────────────────────────
+
+function renderStepList(steps, current) {
+  const el = document.getElementById('stepList');
+  el.innerHTML = '';
+  steps.forEach((s, i) => {
+    const div = document.createElement('div');
+    div.className = 'step-item' +
+      (i === current ? ' active' : '') +
+      (i < current ? ' complete' : '');
+    div.onclick = () => showStep(i);
+    div.innerHTML = `
+      <div class="step-num">${s.step_number || i+1}</div>
+      <div class="step-info">
+        <div class="step-name">${s.step_title}</div>
+        <div class="step-desc">${s.step_subtitle}</div>
+      </div>`;
+    el.appendChild(div);
+  });
+}
+
+function renderFlow(flowNode, flowEdge) {
+  for (let i = 0; i < 5; i++) {
+    const icon = document.getElementById('fi' + i);
+    const label = document.getElementById('fl' + i);
+    icon.className = 'flow-icon' +
+      (i < flowNode ? ' complete' : i === flowNode ? ' active' : '');
+    label.className = 'flow-label' +
+      (i < flowNode ? ' complete' : i === flowNode ? ' active' : '');
+  }
+  for (let i = 0; i < 4; i++) {
+    const edge = document.getElementById('fe' + i);
+    edge.className = 'flow-edge' +
+      (i < flowEdge ? ' complete' : i === flowEdge ? ' active' : '');
+  }
+  document.getElementById('flowStatus').textContent =
+    FLOW_NODES[flowNode] || '—';
+}
+
+function renderMessage(step) {
+  const badge = document.getElementById('msgBadge');
+  badge.textContent = step.tag;
+  badge.style.background = step.tag_color;
+  badge.style.color = step.tag_text.replace('var(--', '').replace(')', '');
+  // resolve CSS vars manually for common ones
+  const colorMap = {
+    'purple2':'#c084fc', 'blue2':'#60a5fa', 'green2':'#4ade80',
+    'amber2':'#fbbf24', 'red2':'#f87171', 'cyan2':'#22d3ee'
+  };
+  const varName = step.tag_text.replace('var(--','').replace(')','');
+  badge.style.color = colorMap[varName] || step.tag_text;
+  badge.style.border = `1px solid ${(colorMap[varName] || '#888')}44`;
+
+  document.getElementById('msgLabel').textContent = step.message_label;
+  const ts = step.timestamp ? new Date(step.timestamp).toLocaleTimeString() : '—';
+  document.getElementById('msgTimestamp').textContent = ts;
+  document.getElementById('messageBody').innerHTML =
+    highlightContent(step.message_content);
+}
+
+function renderTxState(step) {
+  const statusEl = document.getElementById('txStatusVal');
+  statusEl.textContent = step.tx_status;
+  const s = step.tx_status.toLowerCase();
+  statusEl.className = 'tx-value ' +
+    (s.includes('✓') || s.includes('complet') || s.includes('paid') ? 'green' :
+     s.includes('transit') || s.includes('fx') || s.includes('initia') ? 'blue' : 'amber');
+
+  document.getElementById('txE2eVal').textContent = step.tx_e2e_id;
+  document.getElementById('txAmountVal').textContent = step.tx_amount;
+
+  const fxEl = document.getElementById('txFxVal');
+  fxEl.textContent = step.tx_fx_rate || '—';
+  fxEl.className = 'tx-value' + (step.tx_fx_rate && step.tx_fx_rate !== '—' ? ' green' : '');
+
+  const settleEl = document.getElementById('txSettleVal');
+  settleEl.textContent = step.tx_settlement;
+  settleEl.className = 'tx-value ' +
+    (step.tx_settlement && (step.tx_settlement.includes('✓') ||
+      step.tx_settlement.includes('GBP') || step.tx_settlement.includes('RECOC')) ? 'green' : 'amber');
+}
+
+function renderCompliance(step) {
+  const fields = [
+    ['compOfac',  step.ofac_screen],
+    ['compAml',   step.aml_check],
+    ['compIban',  step.iban_valid],
+    ['compAddr',  step.address_format],
+    ['compSanc',  step.sanctions_db],
+  ];
+  fields.forEach(([id, val]) => {
+    const el = document.getElementById(id);
+    el.textContent = val || 'QUEUED';
+    el.className = 'comp-status ' + compClass(val);
+  });
+}
+
+function renderSkills(step) {
+  const el = document.getElementById('skillList');
+  el.innerHTML = '';
+  const activated = step.skills_activated || [];
+  const saved = step.skills_saved || [];
+  if (activated.length === 0 && saved.length === 0) {
+    el.innerHTML = '<span class="skill-chip empty">no skills activated</span>';
+    return;
+  }
+  activated.forEach(s => {
+    const span = document.createElement('span');
+    span.className = 'skill-chip' + (saved.includes(s) ? ' new' : '');
+    span.textContent = (saved.includes(s) ? '★ ' : '') + s;
+    el.appendChild(span);
+  });
+  saved.filter(s => !activated.includes(s)).forEach(s => {
+    const span = document.createElement('span');
+    span.className = 'skill-chip new';
+    span.textContent = '★ ' + s + ' (new)';
+    el.appendChild(span);
+  });
+}
+
+function renderLogs(step) {
+  const el = document.getElementById('logEntries');
+  el.innerHTML = '';
+  const logs = step.logs || [];
+  if (logs.length === 0) {
+    el.innerHTML = '<div class="log-entry"><span class="log-msg" style="color:var(--text3)">No log entries</span></div>';
+    return;
+  }
+  logs.forEach(entry => {
+    const div = document.createElement('div');
+    div.className = 'log-entry ' + (entry.type || 'check');
+    const icon = entry.type === 'pass' ? '✓' : entry.type === 'warn' ? '⚠' : entry.type === 'error' ? '✗' : '○';
+    div.innerHTML = `
+      <span class="log-time">${entry.time || '--:--:--'}</span>
+      <span class="log-icon">${icon}</span>
+      <span class="log-msg">${entry.msg || ''}</span>`;
+    el.appendChild(div);
+  });
+  el.scrollTop = el.scrollHeight;
+}
+
+function renderProgress(idx, total) {
+  const pct = total > 0 ? Math.round(((idx + 1) / total) * 100) : 0;
+  document.getElementById('progressLabel').textContent = `STEP ${idx+1}/${total}`;
+  document.getElementById('progressFill').style.width = pct + '%';
+  document.getElementById('progressPct').textContent = pct + '%';
+}
+
+function showStep(idx) {
+  if (!steps.length) return;
+  idx = Math.max(0, Math.min(idx, steps.length - 1));
+  currentStep = idx;
+  const step = steps[idx];
+
+  renderStepList(steps, idx);
+  renderFlow(step.flow_node || 0, step.flow_edge || 0);
+  renderMessage(step);
+  renderTxState(step);
+  renderCompliance(step);
+  renderSkills(step);
+  renderLogs(step);
+  renderProgress(idx, steps.length);
+
+  // Show result panel on last step
+  const resultPanel = document.getElementById('resultPanel');
+  if (idx === steps.length - 1 && step.task_success) {
+    resultPanel.classList.add('visible');
+    document.getElementById('statSkills').textContent =
+      steps.reduce((n, s) => n + (s.skills_saved || []).length, 0);
+    document.getElementById('statTools').textContent =
+      steps.reduce((n, s) => n + (s.tools_called || []).length, 0);
+    const totalMs = steps.reduce((n, s) => n + (s.duration_ms || 0), 0);
+    document.getElementById('statDuration').textContent =
+      totalMs > 1000 ? (totalMs / 1000).toFixed(1) + 's' : totalMs + 'ms';
+    document.getElementById('statE2e').textContent = step.tx_e2e_id || '—';
+  } else {
+    resultPanel.classList.remove('visible');
+  }
+}
+
+// ─── Demo animation ───────────────────────────────────────────────────────
+
+function startDemo() {
+  if (usingTrace && traceSteps.length > 0) {
+    replayFromTrace();
+    return;
+  }
+  steps = STEPS_FALLBACK;
+  renderStepList(steps, 0);
+  currentStep = 0;
+  showStep(0);
+  clearInterval(animTimer);
+  animTimer = setInterval(() => {
+    if (currentStep < steps.length - 1) {
+      showStep(currentStep + 1);
+    } else {
+      clearInterval(animTimer);
+    }
+  }, speedMs);
+}
+
+function resetDemo() {
+  clearInterval(animTimer);
+  currentStep = 0;
+  if (usingTrace && traceSteps.length > 0) {
+    steps = traceSteps;
+  } else {
+    steps = STEPS_FALLBACK;
+  }
+  renderStepList(steps, 0);
+  renderFlow(0, 0);
+  document.getElementById('messageBody').innerHTML =
+    '<span style="color:var(--text3)">// Select a step to view content</span>';
+  document.getElementById('skillList').innerHTML =
+    '<span class="skill-chip empty">no skills loaded</span>';
+  document.getElementById('logEntries').innerHTML =
+    '<div class="log-entry"><span class="log-time">--:--:--</span><span class="log-icon">○</span><span class="log-msg">Reset</span></div>';
+  document.getElementById('resultPanel').classList.remove('visible');
+  renderProgress(0, steps.length);
+}
+
+function replayFromTrace() {
+  if (!traceSteps.length) return;
+  clearInterval(animTimer);
+  steps = traceSteps;
+  currentStep = 0;
+  showStep(0);
+  animTimer = setInterval(() => {
+    if (currentStep < steps.length - 1) {
+      showStep(currentStep + 1);
+    } else {
+      clearInterval(animTimer);
+    }
+  }, speedMs);
+}
+
+function updateSpeed(val) {
+  speedMs = Math.round(3000 / parseInt(val));
+  document.getElementById('speedLabel').textContent = val + '×';
+}
+
+// ─── Trace file loading ───────────────────────────────────────────────────
+
+async function loadTrace() {
+  try {
+    const res = await fetch('../logs/payment_trace.jsonl?t=' + Date.now());
+    if (!res.ok) return null;
+    const text = await res.text();
+    if (!text.trim()) return null;
+
+    const lines = text.trim().split('\n').filter(l => l.trim());
+    const entries = [];
+    let summary = null;
+    for (const line of lines) {
+      try {
+        const obj = JSON.parse(line);
+        if (obj._type === 'summary') { summary = obj; continue; }
+        entries.push(obj);
+      } catch(e) {}
+    }
+    return { steps: entries, summary };
+  } catch(e) {
+    return null;
+  }
+}
+
+function applyTrace(data) {
+  if (!data || !data.steps || data.steps.length === 0) return false;
+
+  traceSteps = data.steps;
+  usingTrace = true;
+
+  // Update live indicators
+  document.getElementById('liveStatus').textContent = 'LIVE TRACE';
+  document.getElementById('liveDot').classList.add('active');
+  document.getElementById('replayBtn').style.display = '';
+  document.getElementById('liveIndicator').style.display = 'flex';
+
+  // If new steps arrived since last check, advance display
+  if (data.steps.length > lastTraceLen) {
+    lastTraceLen = data.steps.length;
+    steps = traceSteps;
+    const last = data.steps.length - 1;
+    renderStepList(steps, last);
+    showStep(last);
+  }
+
+  // Show result panel if summary present
+  if (data.summary && data.steps.length === 8) {
+    const rp = document.getElementById('resultPanel');
+    rp.classList.add('visible');
+    document.getElementById('statSkills').textContent = data.summary.total_skills_saved ?? '—';
+    document.getElementById('statTools').textContent = data.summary.total_tools_called ?? '—';
+    const dur = data.summary.total_duration_seconds;
+    document.getElementById('statDuration').textContent = dur ? dur + 's' : '—';
+    document.getElementById('statE2e').textContent = data.summary.e2e_id || '—';
+  }
+
+  return true;
+}
+
+async function refreshTrace() {
+  const data = await loadTrace();
+  const hasTrace = applyTrace(data);
+  document.getElementById('refreshStatus').textContent =
+    'last refresh: ' + new Date().toLocaleTimeString();
+
+  if (!hasTrace && !usingTrace) {
+    // Show waiting state in step list if nothing loaded
+    const el = document.getElementById('stepList');
+    if (!el.children.length) {
+      el.innerHTML = `<div style="padding:20px;display:flex;flex-direction:column;align-items:center;gap:12px">
+        <div class="spinner"></div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text3);text-align:center">
+          Waiting for agent...<br>
+          <span style="font-size:9px;margin-top:4px;display:block">Run simulation to begin</span>
+        </div>
+      </div>`;
+    }
+  }
+}
+
+// ─── Init ────────────────────────────────────────────────────────────────
+
+window.addEventListener('DOMContentLoaded', async () => {
+  // Render fallback step list immediately
+  steps = STEPS_FALLBACK;
+  renderStepList(steps, 0);
+
+  // Try to load trace
+  await refreshTrace();
+
+  // Auto-refresh every 3s
+  refreshTimer = setInterval(refreshTrace, 3000);
+});
+</script>
+</body>
+</html>

@@ -1,11 +1,15 @@
 ---
 name: skill_creator
-tags: [skill, evaluation, meta, agent]
+tags:
+- skill
+- evaluation
+- meta
+- agent
 trigger: task involves deciding whether to create a new reusable skill
 type: checklist
 version: 1
-success_count: 0
-fail_count: 0
+success_count: 2
+fail_count: 2
 ---
 # Skill: Skill Evaluation
 

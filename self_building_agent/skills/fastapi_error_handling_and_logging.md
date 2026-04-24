@@ -7,7 +7,7 @@ tags:
 trigger: when handling errors and logging in a FastAPI application
 type: pattern
 version: 1
-success_count: 0
+success_count: 2
 fail_count: 0
 ---
 ---

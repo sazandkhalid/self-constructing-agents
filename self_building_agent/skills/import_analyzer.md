@@ -8,8 +8,8 @@ trigger: When analyzing imports in a repository to identify frequently used modu
   or detect potential import conflicts.
 type: pattern
 version: 1
-success_count: 5
-fail_count: 0
+success_count: 7
+fail_count: 1
 ---
 ---
 # Import Analyzer Skill
