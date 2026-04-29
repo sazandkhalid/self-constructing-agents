@@ -1,0 +1,40 @@
+[
+  {
+    "file": "common_scheme_callable.py",
+    "skill": "common_scheme_callable",
+    "version": 1,
+    "tags": [
+      "inspect",
+      "fastapi",
+      "security",
+      "extract",
+      "common"
+    ],
+    "verified": true,
+    "protocol": null,
+    "rail": null,
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "resolve_dependency_callable.py",
+    "skill": "resolve_dependency_callable",
+    "version": 1,
+    "tags": [
+      "fastapi",
+      "dependencies",
+      "utils",
+      "resolves",
+      "dependency"
+    ],
+    "verified": true,
+    "protocol": null,
+    "rail": null,
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  }
+]

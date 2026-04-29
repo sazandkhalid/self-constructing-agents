@@ -4,3 +4,10 @@ self_building_agent/venv/
 self_building_agent/eval/target_repo/fastapi/
 self_building_agent/eval/backups/
 self_building_agent/eval/__pycache__/
+.env
+logs/
+memory/
+tools/registry.json
+venv/
+**/__pycache__/
+.DS_Store

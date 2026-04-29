@@ -1,0 +1,21 @@
+[
+  {
+    "file": "process_camt053_statement.py",
+    "skill": "process_camt053_statement",
+    "version": 1,
+    "tags": [
+      "what",
+      "function",
+      "parser",
+      "used",
+      "extract"
+    ],
+    "verified": true,
+    "protocol": "iso20022",
+    "rail": "iso20022",
+    "audit_required": true,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  }
+]

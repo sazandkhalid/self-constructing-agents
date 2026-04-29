@@ -1,0 +1,21 @@
+[
+  {
+    "file": "convert_pacs008_to_ledger_entry.py",
+    "skill": "convert_pacs008_to_ledger_entry",
+    "version": 1,
+    "tags": [
+      "write",
+      "function",
+      "convert_pacs008_to_ledger_entry",
+      "xml_string",
+      "ledgerentry"
+    ],
+    "verified": true,
+    "protocol": null,
+    "rail": null,
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  }
+]

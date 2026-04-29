@@ -1,0 +1,94 @@
+[
+  {
+    "file": "get_eur_to_gbp_exchange_rate.py",
+    "skill": "get_eur_to_gbp_exchange_rate",
+    "version": 1,
+    "tags": [
+      "cross",
+      "border",
+      "payment",
+      "from",
+      "german"
+    ],
+    "verified": true,
+    "protocol": "general",
+    "rail": "general",
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "get_iso20022_message_types.py",
+    "skill": "get_iso20022_message_types",
+    "version": 1,
+    "tags": [
+      "list",
+      "message",
+      "type",
+      "constants",
+      "defined"
+    ],
+    "verified": true,
+    "protocol": "iso20022",
+    "rail": "swift_mx",
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "iban_validation_skill.py",
+    "skill": "iban_validation_skill",
+    "version": 1,
+    "tags": [
+      "validate",
+      "this",
+      "iban",
+      "gb82west12345698765432"
+    ],
+    "verified": true,
+    "protocol": "general",
+    "rail": "general",
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "list_all_skills_in_directory.py",
+    "skill": "list_all_skills_in_directory",
+    "version": 1,
+    "tags": [
+      "list",
+      "skills",
+      "directory"
+    ],
+    "verified": true,
+    "protocol": "general",
+    "rail": "general",
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "validate_iban_and_extract_details.py",
+    "skill": "validate_iban_and_extract_details",
+    "version": 1,
+    "tags": [
+      "validate",
+      "this",
+      "iban",
+      "gb82west12345698765432",
+      "tell"
+    ],
+    "verified": true,
+    "protocol": "general",
+    "rail": "general",
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  }
+]

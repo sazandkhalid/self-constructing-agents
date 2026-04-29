@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Self-Constructing Agents — Presentation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#f8fafc; --bg2:#ffffff; --bg3:#f1f5f9;
+  --blue:#2563eb; --blue-dim:rgba(37,99,235,.08); --blue-mid:rgba(37,99,235,.18);
+  --purple:#7c3aed; --purple-dim:rgba(124,58,237,.08);
+  --green:#16a34a; --green-dim:rgba(22,163,74,.08);
+  --amber:#d97706; --amber-dim:rgba(217,119,6,.08);
+  --red:#dc2626; --red-dim:rgba(220,38,38,.08);
+  --text:#0f172a; --text-dim:#334155; --text-muted:#64748b;
+  --border:rgba(0,0,0,.08); --border-blue:rgba(37,99,235,.2);
+  --mono:"IBM Plex Mono",monospace;
+  --display:"Syne",sans-serif;
+  --body:"Inter",sans-serif;
+  --ease:cubic-bezier(.16,1,.3,1);
+  --r:10px;
+}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);color:var(--text);font-family:var(--body);
+  scroll-snap-type:y mandatory;height:100dvh;overflow-y:scroll;overflow-x:hidden;
+}
+
+/* ── Progress bar ─────────────────────────────────────────── */
+.progress-bar{
+  position:fixed;top:0;left:0;height:3px;z-index:300;width:0%;
+  background:linear-gradient(90deg,var(--blue),var(--purple));
+  transition:width .3s var(--ease);
+}
+
+/* ── Nav dots ─────────────────────────────────────────────── */
+.nav-dots{position:fixed;right:1.25rem;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:.5rem;z-index:300;}
+.nav-dot{width:6px;height:6px;border-radius:50%;background:var(--text-muted);cursor:pointer;border:none;transition:all .3s var(--ease);}
+.nav-dot.active{background:var(--blue);transform:scale(1.6);box-shadow:0 0 0 3px rgba(37,99,235,.2);}
+
+/* ── Slide shell ──────────────────────────────────────────── */
+.slide{
+  min-height:100dvh;width:100%;scroll-snap-align:start;
+  display:flex;align-items:center;justify-content:center;
+  padding:3.5rem 5vw 3.5rem;
+  position:relative;overflow:hidden;
+}
+.slide::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(37,99,235,.03) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(37,99,235,.03) 1px,transparent 1px);
+  background-size:60px 60px;
+}
+.slide-num{
+  position:absolute;bottom:1.25rem;right:1.75rem;
+  font-family:var(--mono);font-size:.72rem;color:var(--text-muted);letter-spacing:.08em;
+}
+
+/* ── Reveals ──────────────────────────────────────────────── */
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .6s var(--ease),transform .6s var(--ease);}
+.reveal-left{opacity:0;transform:translateX(-32px);transition:opacity .6s var(--ease),transform .6s var(--ease);}
+.reveal-scale{opacity:0;transform:scale(.94);transition:opacity .5s var(--ease),transform .5s var(--ease);}
+.slide.visible .reveal{opacity:1;transform:translateY(0);}
+.slide.visible .reveal-left{opacity:1;transform:translateX(0);}
+.slide.visible .reveal-scale{opacity:1;transform:scale(1);}
+.d1{transition-delay:.08s}.d2{transition-delay:.18s}.d3{transition-delay:.28s}
+.d4{transition-delay:.38s}.d5{transition-delay:.48s}.d6{transition-delay:.58s}
+.d7{transition-delay:.68s}.d8{transition-delay:.78s}
+
+/* ── Glow blobs (subtle on light) ────────────────────────── */
+.blob{position:absolute;border-radius:50%;filter:blur(90px);pointer-events:none;opacity:.12;}
+
+/* ── Content wrapper ──────────────────────────────────────── */
+.wrap{width:100%;max-width:1060px;}
+
+/* ── Eyebrow / label ──────────────────────────────────────── */
+.eyebrow{
+  font-family:var(--mono);font-size:.75rem;color:var(--blue);
+  letter-spacing:.2em;text-transform:uppercase;margin-bottom:1rem;
+  display:flex;align-items:center;gap:.6rem;
+}
+.eyebrow::before{content:"";display:inline-block;width:1.5rem;height:2px;background:var(--blue);border-radius:2px;}
+.label{font-family:var(--mono);font-size:.72rem;color:var(--blue);letter-spacing:.18em;text-transform:uppercase;margin-bottom:.75rem;}
+
+/* ── Headings ─────────────────────────────────────────────── */
+h1.hero{
+  font-family:var(--display);font-weight:800;
+  font-size:clamp(3.5rem,8vw,6.5rem);line-height:1.0;letter-spacing:-.03em;
+  background:linear-gradient(135deg,#0f172a 0%,var(--blue) 55%,var(--purple) 100%);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+  margin-bottom:1.25rem;
+}
+h2.heading{
+  font-family:var(--display);font-weight:700;
+  font-size:clamp(2rem,4vw,3rem);line-height:1.1;letter-spacing:-.025em;
+  color:var(--text);margin-bottom:.75rem;
+}
+h2.heading em{font-style:normal;}
+.sub{font-size:1.05rem;color:var(--text-dim);font-weight:400;line-height:1.65;max-width:580px;}
+
+/* ── Cards ────────────────────────────────────────────────── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);padding:1.5rem 1.75rem;box-shadow:0 1px 3px rgba(0,0,0,.06);}
+.card.blue  {border-color:var(--border-blue);background:linear-gradient(135deg,#fff,rgba(37,99,235,.02));}
+.card.purple{border-color:rgba(124,58,237,.22);}
+.card.green {border-color:rgba(22,163,74,.22);}
+.card.amber {border-color:rgba(217,119,6,.22);}
+.card.red   {border-color:rgba(220,38,38,.22);}
+.card-label{font-family:var(--mono);font-size:.68rem;letter-spacing:.15em;text-transform:uppercase;margin-bottom:.6rem;font-weight:600;}
+.lbl-blue{color:var(--blue)}.lbl-purple{color:var(--purple)}.lbl-green{color:var(--green)}
+.lbl-amber{color:var(--amber)}.lbl-red{color:var(--red)}.lbl-muted{color:var(--text-muted)}
+.card h3{font-family:var(--display);font-size:1.15rem;font-weight:700;margin-bottom:.5rem;color:var(--text);}
+.card p{color:var(--text-dim);font-size:.9rem;line-height:1.7;}
+
+/* ── Grids ────────────────────────────────────────────────── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;}
+.ga{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1.25rem;}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:start;}
+.wl{grid-template-columns:1.35fr 1fr;}
+
+/* ── Stat blocks ──────────────────────────────────────────── */
+.stat-block{text-align:center;padding:1.25rem .5rem;}
+.stat-num{font-family:var(--display);font-size:clamp(2rem,4vw,3rem);font-weight:800;line-height:1;margin-bottom:.35rem;}
+.sn-blue  {color:var(--blue)}.sn-green {color:var(--green)}
+.sn-purple{color:var(--purple)}.sn-amber{color:var(--amber)}.sn-red{color:var(--red)}
+.stat-lbl{font-size:.8rem;color:var(--text-muted);line-height:1.35;}
+
+/* ── Highlight box ────────────────────────────────────────── */
+.hbox{
+  background:linear-gradient(135deg,rgba(37,99,235,.05),rgba(124,58,237,.05));
+  border:1.5px solid var(--border-blue);border-radius:var(--r);padding:1.75rem 2rem;
+}
+.hbox .hl{font-family:var(--mono);font-size:.7rem;color:var(--blue);letter-spacing:.18em;text-transform:uppercase;margin-bottom:.6rem;}
+.hbox .hv{font-family:var(--display);font-size:clamp(1.25rem,2.5vw,1.9rem);font-weight:700;color:var(--text);line-height:1.3;}
+.hbox .hv em{font-style:normal;color:var(--blue);}
+.hbox .hs{margin-top:.5rem;font-size:.88rem;color:var(--text-dim);}
+
+/* ── Timeline ─────────────────────────────────────────────── */
+.tl{display:flex;flex-direction:column;}
+.tl-item{display:flex;gap:1rem;padding-bottom:1.25rem;position:relative;}
+.tl-item::before{content:"";position:absolute;left:14px;top:28px;bottom:0;width:2px;background:var(--border);}
+.tl-item:last-child::before{display:none;}
+.tl-dot{width:28px;height:28px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;
+  justify-content:center;font-family:var(--mono);font-size:.65rem;font-weight:700;
+  position:relative;z-index:1;border:2px solid;}
+.dot-blue  {background:var(--blue-dim);border-color:var(--blue);color:var(--blue);}
+.dot-purple{background:var(--purple-dim);border-color:var(--purple);color:var(--purple);}
+.dot-green {background:var(--green-dim);border-color:var(--green);color:var(--green);}
+.dot-amber {background:var(--amber-dim);border-color:var(--amber);color:var(--amber);}
+.dot-gray  {background:var(--bg3);border-color:#cbd5e1;color:var(--text-muted);}
+.tl-body{padding-top:.2rem;}
+.tl-title{font-size:.95rem;font-weight:600;color:var(--text);margin-bottom:.2rem;}
+.tl-desc{font-size:.83rem;color:var(--text-dim);line-height:1.6;}
+
+/* ── Code block ───────────────────────────────────────────── */
+.code{
+  background:#1e293b;color:#94a3b8;border-radius:8px;
+  padding:1.25rem 1.5rem;font-family:var(--mono);font-size:.8rem;line-height:1.8;overflow-x:auto;
+}
+.ckw{color:#a78bfa}.cfn{color:#60a5fa}.cstr{color:#4ade80}.ccm{color:#475569}.cnum{color:#fb923c}
+
+/* ── Badge ────────────────────────────────────────────────── */
+.badge{display:inline-flex;align-items:center;gap:.35rem;padding:.2rem .6rem;border-radius:4px;
+  font-family:var(--mono);font-size:.7rem;font-weight:600;letter-spacing:.04em;border:1.5px solid;}
+.b-pass{background:rgba(22,163,74,.1);color:var(--green);border-color:rgba(22,163,74,.3);}
+.b-warn{background:var(--amber-dim);color:var(--amber);border-color:rgba(217,119,6,.3);}
+.b-block{background:var(--red-dim);color:var(--red);border-color:rgba(220,38,38,.3);}
+
+/* ── Pipeline ─────────────────────────────────────────────── */
+.pipe{display:flex;align-items:center;gap:.4rem;flex-wrap:wrap;}
+.ps{flex:1;text-align:center;padding:.7rem .4rem;border-radius:6px;border:1.5px solid;
+  font-family:var(--mono);font-size:.72rem;font-weight:600;min-width:70px;line-height:1.35;}
+.ps-blue  {background:var(--blue-dim);border-color:var(--border-blue);color:var(--blue);}
+.ps-purple{background:var(--purple-dim);border-color:rgba(124,58,237,.3);color:var(--purple);}
+.ps-green {background:var(--green-dim);border-color:rgba(22,163,74,.3);color:var(--green);}
+.ps-amber {background:var(--amber-dim);border-color:rgba(217,119,6,.3);color:var(--amber);}
+.pa{color:var(--text-muted);font-size:.9rem;flex-shrink:0;}
+
+/* ── Result rows ──────────────────────────────────────────── */
+.rrow{display:flex;align-items:center;justify-content:space-between;
+  padding:.8rem 1.25rem;border-bottom:1px solid var(--border);font-size:.88rem;}
+.rrow:last-child{border-bottom:none;}
+.rn{font-family:var(--mono);font-size:.78rem;color:var(--text-dim);}
+.rc{color:var(--text-muted);}
+.rw{color:var(--blue);font-weight:700;}
+.rdp{font-family:var(--mono);font-size:.78rem;color:var(--green);font-weight:600;}
+.rdn{font-family:var(--mono);font-size:.78rem;color:var(--red);}
+
+/* ── Tags ─────────────────────────────────────────────────── */
+.tag{font-family:var(--mono);font-size:.72rem;padding:.3rem .75rem;border-radius:4px;
+  border:1.5px solid var(--border-blue);color:var(--blue);background:var(--blue-dim);letter-spacing:.04em;}
+.tag.tp{border-color:rgba(124,58,237,.3);color:var(--purple);background:var(--purple-dim);}
+.tag.tg{border-color:rgba(22,163,74,.3);color:var(--green);background:var(--green-dim);}
+.tags{display:flex;flex-wrap:wrap;gap:.5rem;}
+
+/* ── Skill table ──────────────────────────────────────────── */
+.stbl{width:100%;border-collapse:collapse;font-size:.85rem;}
+.stbl th{font-family:var(--mono);font-size:.68rem;color:var(--text-muted);letter-spacing:.1em;
+  text-transform:uppercase;text-align:left;padding:.6rem .9rem;border-bottom:2px solid var(--border);
+  background:var(--bg3);}
+.stbl td{padding:.65rem .9rem;border-bottom:1px solid var(--border);color:var(--text-dim);}
+.stbl td:first-child{font-family:var(--mono);font-size:.78rem;color:var(--text);font-weight:500;}
+.stbl tr:last-child td{border-bottom:none;}
+.stbl tr:hover td{background:var(--bg3);}
+
+/* ── Divider ──────────────────────────────────────────────── */
+.div{height:1px;background:var(--border);margin:.85rem 0;}
+
+/* ── Flow nodes ───────────────────────────────────────────── */
+.fnode{text-align:center;padding:.8rem .6rem;border-radius:6px;border:1.5px solid;background:var(--bg2);}
+.fnode .fl{font-family:var(--mono);font-size:.62rem;color:var(--text-muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.25rem;}
+.fnode .fn{font-size:.85rem;font-weight:600;color:var(--text);}
+
+/* ── Author line ──────────────────────────────────────────── */
+.authors{font-family:var(--mono);font-size:.82rem;color:var(--text-muted);margin-top:1.25rem;}
+
+/* ── Spacing helpers ──────────────────────────────────────── */
+.mt1{margin-top:.75rem}.mt2{margin-top:1.25rem}.mt3{margin-top:2rem}.mb1{margin-bottom:.75rem}
+
+/* ── Title slide ──────────────────────────────────────────── */
+.title-slide{align-items:flex-start;background:linear-gradient(160deg,#fff 0%,#f0f4ff 100%);}
+/* ── Closing slide ────────────────────────────────────────── */
+.closing{align-items:center;text-align:center;background:linear-gradient(160deg,#fff 0%,#f0f4ff 100%);}
+
+/* ── Responsive ───────────────────────────────────────────── */
+@media(max-width:768px){
+  .g2,.g3,.g4,.split,.wl,.ga{grid-template-columns:1fr;}
+  .pipe{flex-direction:column;}
+  .nav-dots{display:none;}
+}
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+<nav class="nav-dots" id="navDots"></nav>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 1 — TITLE
+══════════════════════════════════════════ -->
+<section class="slide title-slide" id="slide-0">
+  <div class="blob" style="width:600px;height:600px;background:#818cf8;top:-15%;right:-5%;"></div>
+  <div class="blob" style="width:400px;height:400px;background:#60a5fa;bottom:0%;left:-8%;opacity:.08;"></div>
+  <div class="wrap">
+    <div class="eyebrow reveal">Georgetown University · DSAN 6725 · 2026</div>
+    <h1 class="hero reveal d1">Self-Constructing<br>Agents</h1>
+    <p class="sub reveal d2">An AI agent that grows its own verified skill library —<br>building institutional knowledge through every task it solves.</p>
+    <div class="tags mt3 reveal d3">
+      <span class="tag">Gemini 2.5 Flash Lite</span>
+      <span class="tag tp">Skill Library</span>
+      <span class="tag tg">+33.3% Improvement</span>
+      <span class="tag">ISO 20022</span>
+      <span class="tag tp">FastAPI</span>
+    </div>
+    <div class="authors reveal d4">Ihsan Alaeddin · Sazan Khalid</div>
+  </div>
+  <div class="slide-num">01 / 14</div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 2 — THE PROBLEM
+══════════════════════════════════════════ -->
+<section class="slide" id="slide-1">
+  <div class="wrap">
+    <div class="label reveal">The Problem</div>
+    <h2 class="heading reveal d1">Every agent starts from <em style="color:var(--red)">zero.</em></h2>
+    <p class="sub reveal d2">Current LLM-based agents repeat the same work indefinitely — no compounding, no learning, no institutional memory.</p>
+    <div class="g3 mt3">
+      <div class="card red reveal d3">
+        <div class="card-label lbl-red">❌ Problem 1</div>
+        <h3>Cold Start Every Time</h3>
+        <p>Each invocation has no memory of prior solutions. Solved a FastAPI routing problem yesterday? Start from scratch today.</p>
+      </div>
+      <div class="card amber reveal d4">
+        <div class="card-label lbl-amber">❌ Problem 2</div>
+        <h3>No Domain Compounding</h3>
+        <p>Domain knowledge — ISO 20022 XML namespaces, ACH routing checksums — must be re-derived on every call. Nothing sticks.</p>
+      </div>
+      <div class="card reveal d5">
+        <div class="card-label lbl-muted">❌ Problem 3</div>
+        <h3>Unverified Outputs</h3>
+        <p>LLM responses are never tested against a real environment. Hallucinated APIs get silently accepted as correct.</p>
+      </div>
+    </div>
+    <div class="hbox mt3 reveal d6">
+      <div class="hl">Hypothesis</div>
+      <div class="hv">An agent that <em>accumulates</em> a verified skill library performs <em>measurably better</em> than one without.</div>
+    </div>
+  </div>
+  <div class="slide-num">02 / 14</div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 3 — WHY THIS DOMAIN
+══════════════════════════════════════════ -->
+<section class="slide" id="slide-2">
+  <div class="blob" style="width:500px;height:500px;background:#fbbf24;top:-10%;right:-5%;opacity:.07;"></div>
+  <div class="wrap">
+    <div class="label reveal">Why This Domain</div>
+    <h2 class="heading reveal d1">Banks are paying <em style="color:var(--amber)">half a billion dollars</em><br>to solve the same problem, over and over.</h2>
+    <p class="sub reveal d2">November 2025: SWIFT retired the legacy MT format. ~5,000 member banks were projected non-compliant at the deadline.</p>
+    <div class="g4 mt3">
+      <div class="card amber stat-block reveal d2">
+        <div class="stat-num sn-amber">~5K</div>
+        <div class="stat-lbl">Banks projected non-compliant</div>
+      </div>
+      <div class="card red stat-block reveal d3">
+        <div class="stat-num sn-red">$497K</div>
+        <div class="stat-lbl">Avg cost per problematic project</div>
+      </div>
+      <div class="card amber stat-block reveal d4">
+        <div class="stat-num sn-amber">83%</div>
+        <div class="stat-lbl">Modernisation projects deliver late</div>
+      </div>
+      <div class="card amber stat-block reveal d5">
+        <div class="stat-num sn-amber">87%</div>
+        <div class="stat-lbl">Run over budget</div>
+      </div>
+    </div>
+    <div class="split mt3">
+      <div class="card red reveal-left d3">
+        <div class="card-label lbl-red">The structural problem</div>
+        <p class="mb1">A consultant spends three years writing ISO 20022 message parsers. They get fast, accurate, aware of edge cases. Then they leave. The next institution hires a new consultant. The same problems get re-solved from scratch.</p>
+        <p style="font-weight:600;color:var(--text);">Knowledge does not compound across institutions, projects, or people.</p>
+      </div>
+      <div class="hbox reveal d4">
+        <div class="hl">Why an Agent</div>
+        <div class="hv">An agent that accumulates <em>verified payment-protocol skills</em> is, in principle, a partial answer.</div>
+        <div class="hs">The skills it builds for one institution apply to the next. The knowledge does not walk out the door.</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">03 / 14</div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 4 — RESEARCH QUESTIONS
+══════════════════════════════════════════ -->
+<section class="slide" id="slide-3">
+  <div class="wrap">
+    <div class="label reveal">Research Questions</div>
+    <h2 class="heading reveal d1">Three questions, one architecture to answer them.</h2>
+    <div class="g3 mt3">
+      <div class="card blue reveal d2">
+        <div class="card-label lbl-blue">RQ1 · Performance</div>
+        <h3>Does an accumulated skill library make the agent measurably better?</h3>
+        <p>Tested via cold-vs-warm benchmark on the FastAPI codebase across three task tiers.</p>
+      </div>
+      <div class="card purple reveal d3">
+        <div class="card-label lbl-purple">RQ2 · Mechanism</div>
+        <h3>Where does the benefit come from?</h3>
+        <p>Direct skill reuse, accumulated context quality, episodic memory — or some combination?</p>
+      </div>
+      <div class="card green reveal d4">
+        <div class="card-label lbl-green">RQ3 · Verification</div>
+        <h3>Is the verification pipeline strict enough?</h3>
+        <p>Trustworthy enough for regulated domains, without suppressing skill formation entirely.</p>
+      </div>
+    </div>
+    <div class="hbox mt3 reveal d5">
+      <div class="hl">Our Answer · in one sentence</div>
+      <div class="hv">A self-constructing agent that <em>writes, verifies, and accumulates</em> a permanent library of executable Python skills as a by-product of normal task execution — and reuses them through composition, evolution, and decay.</div>
+    </div>
+    <div class="tags mt2 reveal d6">
+      <span class="tag">verified persistence</span>
+      <span class="tag tp">lifecycle management</span>
+      <span class="tag tg">domain-applicable to payments</span>
+    </div>
+  </div>
+  <div class="slide-num">04 / 14</div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 5 — SYSTEM ARCHITECTURE
+══════════════════════════════════════════ -->
+<section class="slide" id="slide-4">
+  <div class="wrap">
+    <div class="label reveal">Architecture</div>
+    <h2 class="heading reveal d1">Six layers. One self-improving loop.</h2>
+    <div class="split mt3">
+      <div class="tl reveal-left d2">
+        <div class="tl-item">
+          <div class="tl-dot dot-blue">1</div>
+          <div class="tl-body">
+            <div class="tl-title">Task Intake + RAG Context</div>
+            <div class="tl-desc"><span style="font-family:var(--mono);color:var(--blue);font-size:.8rem">run.py / rag.py</span> — Task arrives; 7 seeded financial-spec docs retrieved. Embedding fallback via sentence-transformers.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot dot-purple">2</div>
+          <div class="tl-body">
+            <div class="tl-title">Skill Selection (2-Stage)</div>
+            <div class="tl-desc"><span style="font-family:var(--mono);color:var(--purple);font-size:.8rem">select_skills()</span> — Keyword pre-filter → embedding cosine rank → LLM ranker. Dynamic top-k based on library size.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot dot-blue">3</div>
+          <div class="tl-body">
+            <div class="tl-title">LLM Response + Code Execution</div>
+            <div class="tl-desc"><span style="font-family:var(--mono);color:var(--blue);font-size:.8rem">run_task()</span> — Gemini 2.5 Flash Lite generates response (max_tokens=8000). EXECUTE blocks run in subprocess.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot dot-green">4</div>
+          <div class="tl-body">
+            <div class="tl-title">Skill Persistence Pipeline</div>
+            <div class="tl-desc"><span style="font-family:var(--mono);color:var(--green);font-size:.8rem">materialize_py_skill()</span> — AST parse → subprocess verify → ComplianceShield → ValidationAgent → save.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot dot-amber">5</div>
+          <div class="tl-body">
+            <div class="tl-title">Failure Classification + Recovery</div>
+            <div class="tl-desc"><span style="font-family:var(--mono);color:var(--amber);font-size:.8rem">classify_failure()</span> — 5 failure types. Automatic recovery attempt with augmented prompt.</div>
+          </div>
+        </div>
+      </div>
+      <div class="reveal d3">
+        <div class="card blue">
+          <div class="card-label lbl-blue">Core Modules</div>
+          <div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.5rem;">
+            <div style="display:flex;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid var(--border);"><span style="font-family:var(--mono);font-size:.82rem;font-weight:500">run.py</span><span style="font-size:.78rem;color:var(--text-muted)">1,629 lines · agent core</span></div>
+            <div style="display:flex;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid var(--border);"><span style="font-family:var(--mono);font-size:.82rem;font-weight:500">compliance.py</span><span style="font-size:.78rem;color:var(--text-muted)">143 lines · shield</span></div>
+            <div style="display:flex;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid var(--border);"><span style="font-family:var(--mono);font-size:.82rem;font-weight:500">validation_agent.py</span><span style="font-size:.78rem;color:var(--text-muted)">121 lines · adversarial</span></div>
+            <div style="display:flex;justify-content:space-between;padding:.35rem 0;border-bottom:1px solid var(--border);"><span style="font-family:var(--mono);font-size:.82rem;font-weight:500">mcp_client.py</span><span style="font-size:.78rem;color:var(--text-muted)">306 lines · tools</span></div>
+            <div style="display:flex;justify-content:space-between;padding:.35rem 0;"><span style="font-family:var(--mono);font-size:.82rem;font-weight:500">rag.py</span><span style="font-size:.78rem;color:var(--text-muted)">287 lines · knowledge</span></div>
+          </div>
+          <div class="div"></div>
+          <div style="text-align:center;font-size:.82rem;color:var(--text-muted);">~4,200 lines of Python · zero agent frameworks</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">05 / 14</div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 6 — SKILL ANATOMY
+══════════════════════════════════════════ -->
+<section class="slide" id="slide-5">
+  <div class="wrap">
+    <div class="label reveal">Skill Anatomy</div>
+    <h2 class="heading reveal d1">A skill is a function with a <em style="color:var(--blue)">verifiable contract.</em></h2>
+    <div class="g3 mt3">
+      <div class="reveal-left d2">
+        <div class="code">
+<span class="ccm"># skill: parse_pain001_fields</span>
+<span class="ccm"># version: 1</span>
+<span class="ccm"># tags: [iso20022, parse, pain]</span>
+<span class="ccm"># protocol: iso20022</span>
+<span class="ccm"># rail: swift_mx</span>
+<span class="ccm"># audit_required: true</span>
+<span class="ccm"># verified: true</span>
+<span class="ccm"># success_count: 0</span>
+        </div>
+      </div>
+      <div class="card purple reveal d3">
+        <div class="card-label lbl-purple">Skill Evolution</div>
+        <h3>Auto-healing skills</h3>
+        <p>If <code style="font-family:var(--mono);color:var(--purple)">fail_count ≥ 2</code> and <code style="font-family:var(--mono);color:var(--purple)">fail &gt; success</code>, the agent calls <code style="font-family:var(--mono)">evolve_skill()</code> — prompts the LLM to fix it, archives v1, persists v2.</p>
+      </div>
+      <div class="card green reveal d4">
+        <div class="card-label lbl-green">Skill Decay</div>
+        <h3>Automatic forgetting</h3>
+        <p>Skills unused for 14+ days with <code style="font-family:var(--mono);color:var(--green)">relevance &lt; 0.1</code> are auto-archived to <code style="font-family:var(--mono)">skills_py/archive/</code> — the library stays lean.</p>
+      </div>
+    </div>
+    <div class="mt3 reveal d5" style="border:1.5px solid var(--border-blue);border-radius:var(--r);padding:1.5rem 2rem;background:var(--blue-dim);">
+      <div class="card-label lbl-blue mb1">The 5-gate verification pipeline — every skill passes all gates or is rejected</div>
+      <div class="pipe">
+        <div class="ps ps-blue">LLM<br>RESPONSE</div><div class="pa">→</div>
+        <div class="ps ps-purple">AST<br>PARSE</div><div class="pa">→</div>
+        <div class="ps ps-blue">SUBPROCESS<br>VERIFY</div><div class="pa">→</div>
+        <div class="ps ps-amber">COMPLIANCE<br>SHIELD</div><div class="pa">→</div>
+        <div class="ps ps-purple">VALIDATION<br>AGENT</div><div class="pa">→</div>
+        <div class="ps ps-green">PERSIST</div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">06 / 14</div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 7 — EXPERIMENT DESIGN
+══════════════════════════════════════════ -->
+<section class="slide" id="slide-6">
+  <div class="wrap">
+    <div class="label reveal">Experiment Design</div>
+    <h2 class="heading reveal d1">Cold vs. Warm. A controlled benchmark.</h2>
+    <div class="split mt3">
+      <div class="tl reveal-left d2">
+        <div class="tl-item">
+          <div class="tl-dot dot-gray">1</div>
+          <div class="tl-body">
+            <div class="tl-title">Reset State</div>
+            <div class="tl-desc">Wipe <code style="font-family:var(--mono)">skills_py/</code> and episodic memory. Back up existing state to <code style="font-family:var(--mono)">eval/backups/</code>.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot dot-gray">2</div>
+          <div class="tl-body">
+            <div class="tl-title">COLD Benchmark</div>
+            <div class="tl-desc">Run all benchmark tasks with empty skill library. Score with LLM judge (0–2) + bonuses.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot dot-purple">3</div>
+          <div class="tl-body">
+            <div class="tl-title">Exploration Phase</div>
+            <div class="tl-desc">Run 20 exploration tasks to build the skill library. Skills verified and persisted during this phase.</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-dot dot-blue">4</div>
+          <div class="tl-body">
+            <div class="tl-title">WARM Benchmark</div>
+            <div class="tl-desc">Re-run the same benchmark with the populated skill library. Compare scores.</div>
+          </div>
+        </div>
+      </div>
+      <div class="reveal d3">
+        <div class="card blue mb1" style="margin-bottom:1rem;">
+          <div class="card-label lbl-blue">Scoring Rubric</div>
+          <div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.5rem;">
+            <div style="display:flex;justify-content:space-between;font-size:.88rem;"><span style="color:var(--text-dim)">LLM Judge Score</span><span style="font-family:var(--mono);color:var(--blue);font-weight:600">0–2 pts</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:.88rem;"><span style="color:var(--text-dim)">Code executes successfully</span><span style="font-family:var(--mono);color:var(--blue);font-weight:600">+1 pt</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:.88rem;"><span style="color:var(--text-dim)">References real repo files</span><span style="font-family:var(--mono);color:var(--blue);font-weight:600">+1 pt</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:.88rem;"><span style="color:var(--text-dim)">Used verified skill</span><span style="font-family:var(--mono);color:var(--blue);font-weight:600">+1 pt</span></div>
+            <div class="div"></div>
+            <div style="display:flex;justify-content:space-between;font-size:.88rem;font-weight:700;"><span>Max score (capped)</span><span style="font-family:var(--mono);color:var(--blue)">3.0 pts</span></div>
+          </div>
+        </div>
+        <div class="card purple">
+          <div class="card-label lbl-purple">Benchmark: 3 Tiers × FastAPI</div>
+          <div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.5rem;">
+            <div style="font-size:.88rem;"><span style="font-family:var(--mono);color:var(--purple);font-size:.75rem;font-weight:600;">TIER 1</span> <span style="color:var(--text-dim);margin-left:.35rem;">Structural — list/find things in the repo</span></div>
+            <div style="font-size:.88rem;"><span style="font-family:var(--mono);color:var(--purple);font-size:.75rem;font-weight:600;">TIER 2</span> <span style="color:var(--text-dim);margin-left:.35rem;">Pattern — write code matching existing style</span></div>
+            <div style="font-size:.88rem;"><span style="font-family:var(--mono);color:var(--purple);font-size:.75rem;font-weight:600;">TIER 3</span> <span style="color:var(--text-dim);margin-left:.35rem;">Novel — synthesize / refactor / abstract</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">07 / 14</div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 8 — RESULTS
+══════════════════════════════════════════ -->
+<section class="slide" id="slide-7">
+  <div class="blob" style="width:450px;height:450px;background:#4ade80;top:10%;right:-5%;opacity:.08;"></div>
+  <div class="wrap">
+    <div class="label reveal">Results</div>
+    <h2 class="heading reveal d1">Hypothesis confirmed. Warm agents score <em style="color:var(--green)">33.3% higher.</em></h2>
+    <div class="g4 mt3">
+      <div class="card blue stat-block reveal d1"><div class="stat-num sn-blue">2.00</div><div class="stat-lbl">Cold Avg / 3.0</div></div>
+      <div class="card green stat-block reveal d2"><div class="stat-num sn-green">2.67</div><div class="stat-lbl">Warm Avg / 3.0</div></div>
+      <div class="card purple stat-block reveal d3"><div class="stat-num sn-purple">+33%</div><div class="stat-lbl">Improvement</div></div>
+      <div class="card amber stat-block reveal d4"><div class="stat-num sn-amber">6</div><div class="stat-lbl">Skills Built</div></div>
+    </div>
+    <div class="split mt3">
+      <div class="card reveal d3">
+        <div class="card-label lbl-blue">Score by Tier (Cold → Warm)</div>
+        <div class="rrow"><div class="rn">TIER 1 · structural</div><div class="rc">1.50</div><span style="color:var(--text-muted)">→</span><div class="rw">2.50</div><div class="rdp">+1.00</div></div>
+        <div class="rrow"><div class="rn">TIER 2 · pattern</div><div class="rc">2.00</div><span style="color:var(--text-muted)">→</span><div class="rw">2.50</div><div class="rdp">+0.50</div></div>
+        <div class="rrow"><div class="rn">TIER 3 · novel</div><div class="rc">2.50</div><span style="color:var(--text-muted)">→</span><div class="rw">3.00</div><div class="rdp">+0.50</div></div>
+      </div>
+      <div class="reveal d4">
+        <div class="card purple" style="margin-bottom:1rem;">
+          <div class="card-label lbl-purple">Top Performing Skill</div>
+          <div style="font-family:var(--mono);font-size:.82rem;color:var(--purple);font-weight:600;margin:.4rem 0;">abstract_collections_abc_imports</div>
+          <p>Used 1 time in warm run · avg score 3.0 / 3.0 · Built during exploration of FastAPI source</p>
+        </div>
+        <div class="card">
+          <div class="card-label lbl-muted">Failure Distribution (Cold vs Warm)</div>
+          <div style="display:flex;flex-direction:column;gap:.35rem;margin-top:.5rem;font-size:.88rem;">
+            <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim)">missing_context</span><span style="font-family:var(--mono)"><span style="color:var(--text-muted)">3</span> → <span style="color:var(--green);font-weight:600">2</span></span></div>
+            <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim)">hallucination</span><span style="font-family:var(--mono);color:var(--text-muted)">2 → 2</span></div>
+            <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim)">tool_misuse</span><span style="font-family:var(--mono);color:var(--text-muted)">1 → 1</span></div>
+            <div class="div"></div>
+            <div style="display:flex;justify-content:space-between;"><span style="color:var(--text-dim)">Recovery success</span><span style="font-family:var(--mono);color:var(--amber);font-weight:600">50% → 20%</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">08 / 14</div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 9 — COMPLIANCESHIELD + VALIDATION
+══════════════════════════════════════════ -->
+<section class="slide" id="slide-8">
+  <div class="wrap">
+    <div class="label reveal">Safety Layer</div>
+    <h2 class="heading reveal d1">Two guardians before any skill is persisted.</h2>
+    <div class="split mt3">
+      <div class="reveal-left d2">
+        <div class="card amber" style="margin-bottom:1rem;">
+          <div class="card-label lbl-amber">ComplianceShield · static analysis</div>
+          <p class="mb1">Runs after code verification, before disk write. Pure static analysis — no LLM calls, no execution.</p>
+          <div style="display:flex;flex-direction:column;gap:.6rem;">
+            <div style="display:flex;align-items:flex-start;gap:.75rem;"><span class="badge b-pass">PASS</span><span style="font-size:.85rem;color:var(--text-dim)">Clean code, no sensitive literals detected</span></div>
+            <div style="display:flex;align-items:flex-start;gap:.75rem;"><span class="badge b-warn">WARN</span><span style="font-size:.85rem;color:var(--text-dim)">Touches PII/financial data without audit hook — persists with flag</span></div>
+            <div style="display:flex;align-items:flex-start;gap:.75rem;"><span class="badge b-block">BLOCK</span><span style="font-size:.85rem;color:var(--text-dim)">Hardcoded routing number, IBAN, API key, or SSN — rejected entirely</span></div>
+          </div>
+        </div>
+        <div class="code">
+<span class="ccm"># BLOCK pattern examples</span>
+<span class="ckw">re</span>.compile(<span class="cstr">r'routing_number\s*=\s*["\'][0-9]{9}'</span>)
+<span class="ckw">re</span>.compile(<span class="cstr">r'\bIBAN\s*=\s*["\'][A-Z]{2}\d+'</span>)
+<span class="ckw">re</span>.compile(<span class="cstr">r'api_key\s*=\s*["\'].+["\']'</span>)
+<span class="ckw">re</span>.compile(<span class="cstr">r'\b\d{3}-\d{2}-\d{4}\b'</span>)  <span class="ccm"># SSN</span>
+        </div>
+      </div>
+      <div class="reveal d3">
+        <div class="card purple" style="margin-bottom:1rem;">
+          <div class="card-label lbl-purple">ValidationAgent · adversarial LLM testing</div>
+          <p class="mb1">Uses the same Gemini model to generate 6 adversarial edge-case tests and runs them. Catches bugs the original unit test missed.</p>
+          <div style="display:flex;flex-direction:column;gap:.3rem;font-size:.88rem;color:var(--text-dim);">
+            <div>• Empty / None inputs</div><div>• Boundary values (min/max)</div>
+            <div>• Very large values</div><div>• Negative numbers</div>
+            <div>• Unicode strings</div><div>• Type edge cases</div>
+          </div>
+        </div>
+        <div class="code">
+<span class="ckw">def</span> <span class="cfn">run_validation</span>(skill_code, task):
+  edge_code = generate_edge_case_tests(skill_code)
+  <span class="ckw">if not</span> edge_code:
+    <span class="ckw">return</span> <span class="cstr">True</span>, <span class="cstr">"skipped"</span>  <span class="ccm"># never block on outage</span>
+  result = subprocess.run([sys.executable, path])
+  passed = (<span class="cstr">"VALIDATION PASSED"</span> <span class="ckw">in</span> stdout
+            <span class="ckw">and</span> returncode == <span class="cnum">0</span>)
+  <span class="ckw">return</span> passed, output
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">09 / 14</div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 10 — ISO 20022 PAYMENT SIMULATION
+══════════════════════════════════════════ -->
+<section class="slide" id="slide-9">
+  <div class="wrap">
+    <div class="label reveal">Payment Simulation</div>
+    <h2 class="heading reveal d1">A complete ISO 20022 payment lifecycle in 8 steps.</h2>
+    <p class="sub reveal d2">Meridian Ltd (GB) → Fischer GmbH (DE) · €47,832.50 · NatWest → Deutsche Bank via SWIFT MX</p>
+    <div class="split mt3">
+      <div class="reveal-left d3">
+        <div style="display:flex;flex-direction:column;gap:.4rem;">
+          <div class="fnode" style="border-color:rgba(124,58,237,.3);background:rgba(124,58,237,.04);"><div class="fl" style="color:var(--purple)">01</div><div class="fn">pain.001.001.09 — ERP Instruction</div></div>
+          <div style="text-align:center;color:var(--text-muted);font-size:.8rem">↓</div>
+          <div class="fnode" style="border-color:rgba(217,119,6,.3);background:rgba(217,119,6,.04);"><div class="fl" style="color:var(--amber)">02 + 03</div><div class="fn">IBAN MOD-97 Validation + Sanctions Screen</div></div>
+          <div style="text-align:center;color:var(--text-muted);font-size:.8rem">↓</div>
+          <div class="fnode" style="border-color:var(--border-blue);background:var(--blue-dim);"><div class="fl" style="color:var(--blue)">04</div><div class="fn">FX Rate · ECB Frankfurt API · 0.8530 GBP/EUR</div></div>
+          <div style="text-align:center;color:var(--text-muted);font-size:.8rem">↓</div>
+          <div class="fnode" style="border-color:rgba(59,130,246,.3);background:rgba(59,130,246,.04);"><div class="fl" style="color:#3b82f6">05</div><div class="fn">pacs.008 — SWIFT MX Interbank Transfer</div></div>
+          <div style="text-align:center;color:var(--text-muted);font-size:.8rem">↓</div>
+          <div class="fnode" style="border-color:rgba(22,163,74,.3);background:var(--green-dim);"><div class="fl" style="color:var(--green)">06</div><div class="fn">pacs.002 — Deutsche Bank Acceptance</div></div>
+          <div style="text-align:center;color:var(--text-muted);font-size:.8rem">↓</div>
+          <div class="fnode" style="border-color:rgba(22,163,74,.3);background:var(--green-dim);"><div class="fl" style="color:var(--green)">07 + 08</div><div class="fn">camt.054 Notification + Reconciliation</div></div>
+        </div>
+      </div>
+      <div class="reveal d4">
+        <div class="code" style="font-size:.75rem;line-height:1.75;">
+<span class="ccm">&lt;Document xmlns="urn:iso:std:iso:20022:</span>
+<span class="ccm">  tech:xsd:pacs.008.001.08"&gt;</span>
+  <span class="ckw">&lt;FIToFICstmrCdtTrf&gt;</span>
+    <span class="cfn">&lt;GrpHdr&gt;</span>
+      &lt;MsgId&gt;<span class="cstr">SWIFT-MERIDIAN-001</span>&lt;/MsgId&gt;
+      &lt;CreDtTm&gt;<span class="cstr">2026-04-25T10:00:00Z</span>&lt;/CreDtTm&gt;
+    <span class="cfn">&lt;/GrpHdr&gt;</span>
+    <span class="cfn">&lt;CdtTrfTxInf&gt;</span>
+      &lt;PmtId&gt;
+        &lt;EndToEndId&gt;
+          <span class="cstr">E2E-INV-2025-0847</span>
+        &lt;/EndToEndId&gt;
+      &lt;/PmtId&gt;
+      &lt;IntrBkSttlmAmt Ccy=<span class="cstr">"EUR"</span>&gt;
+        <span class="cnum">47832.50</span>
+      &lt;/IntrBkSttlmAmt&gt;
+      &lt;ChrgBr&gt;<span class="cstr">SHA</span>&lt;/ChrgBr&gt;
+      <span class="cfn">&lt;Cdtr&gt;</span>
+        &lt;Nm&gt;<span class="cstr">Fischer GmbH</span>&lt;/Nm&gt;
+      <span class="cfn">&lt;/Cdtr&gt;</span>
+      &lt;IBAN&gt;<span class="cstr">DE89370400440532013000</span>&lt;/IBAN&gt;
+    <span class="cfn">&lt;/CdtTrfTxInf&gt;</span>
+  <span class="ckw">&lt;/FIToFICstmrCdtTrf&gt;</span>
+<span class="ccm">&lt;/Document&gt;</span>
+        </div>
+        <div class="mt2" style="font-size:.82rem;color:var(--text-dim);padding:.85rem 1rem;border:1px solid var(--border);border-radius:var(--r);background:var(--bg3);">
+          The End-to-End ID <code style="font-family:var(--mono);color:var(--blue)">E2E-INV-2025-0847</code> flows unchanged through every message in the chain — enabling full cross-message reconciliation.
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">10 / 14</div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 11 — SKILL LIBRARY
+══════════════════════════════════════════ -->
+<section class="slide" id="slide-10">
+  <div class="wrap">
+    <div class="label reveal">Skill Library</div>
+    <h2 class="heading reveal d1">Ten verified skills. Two domains. <em style="color:var(--blue)">All gates passed.</em></h2>
+    <div class="mt3 reveal d2">
+      <table class="stbl">
+        <thead>
+          <tr><th>Skill Name</th><th>Domain</th><th>Protocol / Rail</th><th>Audit</th><th>Verified</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>parse_pain001_fields</td><td style="color:var(--purple);font-weight:500">ISO 20022</td><td style="font-family:var(--mono);font-size:.76rem;color:var(--purple)">iso20022 / swift_mx</td><td><span class="badge b-warn" style="font-size:.65rem">required</span></td><td><span class="badge b-pass" style="font-size:.65rem">✓</span></td></tr>
+          <tr><td>build_pacs008</td><td style="color:var(--purple);font-weight:500">ISO 20022</td><td style="font-family:var(--mono);font-size:.76rem;color:var(--purple)">iso20022 / swift_mx</td><td><span class="badge b-warn" style="font-size:.65rem">required</span></td><td><span class="badge b-pass" style="font-size:.65rem">✓</span></td></tr>
+          <tr><td>build_pacs002_acceptance</td><td style="color:var(--purple);font-weight:500">ISO 20022</td><td style="font-family:var(--mono);font-size:.76rem;color:var(--purple)">iso20022 / swift_mx</td><td><span class="badge b-warn" style="font-size:.65rem">required</span></td><td><span class="badge b-pass" style="font-size:.65rem">✓</span></td></tr>
+          <tr><td>fetch_eur_gbp_rate</td><td style="color:var(--blue);font-weight:500">General</td><td style="font-family:var(--mono);font-size:.76rem;color:var(--text-muted)">—</td><td><span class="badge b-pass" style="font-size:.65rem">none</span></td><td><span class="badge b-pass" style="font-size:.65rem">✓</span></td></tr>
+          <tr><td>abstract_collections_abc_imports</td><td style="color:var(--blue);font-weight:500">FastAPI</td><td style="font-family:var(--mono);font-size:.76rem;color:var(--text-muted)">general</td><td><span class="badge b-pass" style="font-size:.65rem">none</span></td><td><span class="badge b-pass" style="font-size:.65rem">✓</span></td></tr>
+          <tr><td>is_async_callable</td><td style="color:var(--blue);font-weight:500">FastAPI</td><td style="font-family:var(--mono);font-size:.76rem;color:var(--text-muted)">general</td><td><span class="badge b-pass" style="font-size:.65rem">none</span></td><td><span class="badge b-pass" style="font-size:.65rem">✓</span></td></tr>
+          <tr><td>create_dependant_object</td><td style="color:var(--blue);font-weight:500">FastAPI</td><td style="font-family:var(--mono);font-size:.76rem;color:var(--text-muted)">general</td><td><span class="badge b-pass" style="font-size:.65rem">none</span></td><td><span class="badge b-pass" style="font-size:.65rem">✓</span></td></tr>
+          <tr><td>custom_jsonable_encoder</td><td style="color:var(--blue);font-weight:500">FastAPI</td><td style="font-family:var(--mono);font-size:.76rem;color:var(--text-muted)">general</td><td><span class="badge b-pass" style="font-size:.65rem">none</span></td><td><span class="badge b-pass" style="font-size:.65rem">✓</span></td></tr>
+          <tr><td>get_fastapi_init_middleware_attributes</td><td style="color:var(--blue);font-weight:500">FastAPI</td><td style="font-family:var(--mono);font-size:.76rem;color:var(--text-muted)">general</td><td><span class="badge b-pass" style="font-size:.65rem">none</span></td><td><span class="badge b-pass" style="font-size:.65rem">✓</span></td></tr>
+          <tr><td>dependant_constructor_skill</td><td style="color:var(--blue);font-weight:500">FastAPI</td><td style="font-family:var(--mono);font-size:.76rem;color:var(--text-muted)">general</td><td><span class="badge b-pass" style="font-size:.65rem">none</span></td><td><span class="badge b-pass" style="font-size:.65rem">✓</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="slide-num">11 / 14</div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 12 — TECHNICAL STACK
+══════════════════════════════════════════ -->
+<section class="slide" id="slide-11">
+  <div class="wrap">
+    <div class="label reveal">Technical Stack</div>
+    <h2 class="heading reveal d1">Built entirely in Python. Zero external agent frameworks.</h2>
+    <div class="ga mt3">
+      <div class="card blue reveal d1">
+        <div class="card-label lbl-blue">LLM Layer</div>
+        <h3>Gemini 2.5 Flash Lite</h3>
+        <p><code style="font-family:var(--mono)">google-genai</code> SDK. Exponential backoff retry for 503s. max_tokens=8000 for skill generation to prevent truncation.</p>
+      </div>
+      <div class="card purple reveal d2">
+        <div class="card-label lbl-purple">Embeddings</div>
+        <h3>sentence-transformers</h3>
+        <p><code style="font-family:var(--mono)">all-MiniLM-L6-v2</code> for semantic skill selection and episode retrieval. Cosine similarity with keyword fallback.</p>
+      </div>
+      <div class="card green reveal d3">
+        <div class="card-label lbl-green">Skill Storage</div>
+        <h3>Python files + JSON index</h3>
+        <p><code style="font-family:var(--mono)">skills_py/*.py</code> with YAML-style header comments. <code style="font-family:var(--mono)">index.json</code> for fast metadata lookups.</p>
+      </div>
+      <div class="card amber reveal d4">
+        <div class="card-label lbl-amber">RAG</div>
+        <h3>7 Seeded Spec Docs</h3>
+        <p>ISO 20022, NACHA ACH, SWIFT MX migration, hybrid address format, reconciliation patterns, PII compliance, ledger entry fields.</p>
+      </div>
+      <div class="card blue reveal d5">
+        <div class="card-label lbl-blue">MCP Tools</div>
+        <h3>4 Built-in + Agent-Built</h3>
+        <p><code style="font-family:var(--mono)">read_file · search_code · run_python · list_skills</code>. Agent registers new tools via <code style="font-family:var(--mono)">---MCP TOOL---</code> blocks.</p>
+      </div>
+      <div class="card reveal d6">
+        <div class="card-label lbl-muted">Eval Harness</div>
+        <h3>LLM-as-Judge + Bonuses</h3>
+        <p>Gemini scores each response 0–2. Execution, file reference, and skill-usage bonuses push to max 3.0. Results saved to <code style="font-family:var(--mono)">eval/results/scores.json</code>.</p>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">12 / 14</div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 13 — ROADMAP
+══════════════════════════════════════════ -->
+<section class="slide" id="slide-12">
+  <div class="wrap">
+    <div class="label reveal">Roadmap</div>
+    <h2 class="heading reveal d1">What's next for self-constructing agents.</h2>
+    <div class="split mt3">
+      <div class="card amber reveal-left d2">
+        <div class="card-label lbl-amber">Known Issues (Active)</div>
+        <div style="display:flex;flex-direction:column;gap:.9rem;margin-top:.5rem;">
+          <div><div style="font-size:.92rem;font-weight:600;margin-bottom:.2rem;">Output Truncation</div><div style="font-size:.85rem;color:var(--text-dim)">gemini-2.5-flash-lite cuts generated code at ~100 lines causing syntax errors in payment simulation. Fix: max_tokens 2000→8000 applied.</div></div>
+          <div><div style="font-size:.92rem;font-weight:600;margin-bottom:.2rem;">Domain Mismatch in Exploration</div><div style="font-size:.85rem;color:var(--text-dim)">Simple payment utility exploration tasks rarely match FastAPI benchmark tasks. Only 1 of 6 skills used in warm benchmark.</div></div>
+          <div><div style="font-size:.92rem;font-weight:600;margin-bottom:.2rem;">ComplianceShield WARNs on ISO Skills</div><div style="font-size:.85rem;color:var(--text-dim)">ISO 20022 skills touch IBAN/amount fields without audit hooks — persist with compliance_warn flag but not ideal.</div></div>
+        </div>
+      </div>
+      <div class="reveal d3">
+        <div class="card blue" style="margin-bottom:1rem;">
+          <div class="card-label lbl-blue">Near-Term (1–2 weeks)</div>
+          <div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.5rem;">
+            <div style="display:flex;gap:.6rem;"><span style="color:var(--blue);font-weight:700">→</span><span style="font-size:.88rem;color:var(--text-dim)">Re-run payment simulation with token fix, target 5+ skills saved</span></div>
+            <div style="display:flex;gap:.6rem;"><span style="color:var(--blue);font-weight:700">→</span><span style="font-size:.88rem;color:var(--text-dim)">Domain-aligned exploration: use FastAPI exploration tasks for FastAPI benchmark</span></div>
+            <div style="display:flex;gap:.6rem;"><span style="color:var(--blue);font-weight:700">→</span><span style="font-size:.88rem;color:var(--text-dim)">Scale benchmark to 15 tasks (full 5×3 tier coverage)</span></div>
+            <div style="display:flex;gap:.6rem;"><span style="color:var(--blue);font-weight:700">→</span><span style="font-size:.88rem;color:var(--text-dim)">Add audit logging.info() to ISO 20022 skills to clear WARN flags</span></div>
+          </div>
+        </div>
+        <div class="card purple">
+          <div class="card-label lbl-purple">Medium-Term Research</div>
+          <div style="display:flex;flex-direction:column;gap:.5rem;margin-top:.5rem;">
+            <div style="display:flex;gap:.6rem;"><span style="color:var(--purple);font-weight:700">→</span><span style="font-size:.88rem;color:var(--text-dim)">Skill composition: build complex workflows from atomic skills</span></div>
+            <div style="display:flex;gap:.6rem;"><span style="color:var(--purple);font-weight:700">→</span><span style="font-size:.88rem;color:var(--text-dim)">Multi-agent skill sharing: agents teaching each other</span></div>
+            <div style="display:flex;gap:.6rem;"><span style="color:var(--purple);font-weight:700">→</span><span style="font-size:.88rem;color:var(--text-dim)">Upgrade to Gemini 2.5 Flash / Claude 4 Sonnet for higher output limits</span></div>
+            <div style="display:flex;gap:.6rem;"><span style="color:var(--purple);font-weight:700">→</span><span style="font-size:.88rem;color:var(--text-dim)">Larger cold/warm experiments (50+ tasks) for statistical significance</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="slide-num">13 / 14</div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 14 — CLOSING
+══════════════════════════════════════════ -->
+<section class="slide closing" id="slide-13">
+  <div class="blob" style="width:700px;height:700px;background:#bfdbfe;top:50%;left:50%;transform:translate(-50%,-50%);opacity:.4;filter:blur(120px);"></div>
+  <div class="blob" style="width:300px;height:300px;background:#c4b5fd;top:5%;right:8%;opacity:.2;"></div>
+  <div class="wrap" style="display:flex;flex-direction:column;align-items:center;">
+    <div class="eyebrow reveal" style="justify-content:center;">Georgetown · 2026</div>
+    <h1 class="hero reveal d1" style="text-align:center;font-size:clamp(3rem,7vw,6rem);">Agents that<br><em style="-webkit-text-fill-color:initial;color:var(--blue)">remember</em><br>&amp; improve.</h1>
+    <p class="sub reveal d2" style="text-align:center;max-width:500px;margin-top:1rem;">An open-source framework for agents that grow verified, domain-specific skill libraries — building intelligence that compounds over time.</p>
+    <div class="reveal d3" style="display:flex;align-items:center;gap:2.5rem;flex-wrap:wrap;justify-content:center;margin-top:2.5rem;">
+      <div style="text-align:center;"><div style="font-family:var(--display);font-size:2.5rem;font-weight:800;color:var(--blue)">+33%</div><div style="font-size:.82rem;color:var(--text-muted)">warm vs cold</div></div>
+      <div style="width:1px;height:50px;background:var(--border);"></div>
+      <div style="text-align:center;"><div style="font-family:var(--display);font-size:2.5rem;font-weight:800;color:var(--purple)">10</div><div style="font-size:.82rem;color:var(--text-muted)">verified skills</div></div>
+      <div style="width:1px;height:50px;background:var(--border);"></div>
+      <div style="text-align:center;"><div style="font-family:var(--display);font-size:2.5rem;font-weight:800;color:var(--green)">5-gate</div><div style="font-size:.82rem;color:var(--text-muted)">safety pipeline</div></div>
+    </div>
+    <div class="tags reveal d4 mt3">
+      <span class="tag" style="font-size:.8rem;padding:.4rem 1rem;">github.com/sazankhalid</span>
+      <span class="tag tp" style="font-size:.8rem;padding:.4rem 1rem;">sk2153@georgetown.edu</span>
+    </div>
+  </div>
+  <div class="slide-num">14 / 14</div>
+</section>
+
+<script>
+class Presentation {
+  constructor() {
+    this.slides = Array.from(document.querySelectorAll('.slide'));
+    this.total = this.slides.length;
+    this.current = 0;
+    this.lastWheel = 0;
+    this.touchStartY = 0;
+    this._buildDots();
+    this._observe();
+    this._keys();
+    this._wheel();
+    this._touch();
+    setTimeout(() => this.slides[0].classList.add('visible'), 100);
+  }
+  _buildDots() {
+    const nav = document.getElementById('navDots');
+    this.slides.forEach((_, i) => {
+      const b = document.createElement('button');
+      b.className = 'nav-dot' + (i === 0 ? ' active' : '');
+      b.setAttribute('aria-label', `Slide ${i+1}`);
+      b.addEventListener('click', () => this.go(i));
+      nav.appendChild(b);
+    });
+    this.dots = Array.from(nav.querySelectorAll('.nav-dot'));
+  }
+  _observe() {
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          const i = this.slides.indexOf(e.target);
+          if (i !== -1) this._sync(i);
+        }
+      });
+    }, { threshold: 0.5 });
+    this.slides.forEach(s => io.observe(s));
+  }
+  _sync(i) {
+    this.current = i;
+    this.dots.forEach((d, j) => d.classList.toggle('active', j === i));
+    document.getElementById('progressBar').style.width = (i / (this.total - 1) * 100) + '%';
+  }
+  go(i) { this.slides[Math.max(0, Math.min(this.total - 1, i))].scrollIntoView({ behavior: 'smooth' }); }
+  _keys() {
+    document.addEventListener('keydown', e => {
+      if (['ArrowDown','ArrowRight',' ','PageDown'].includes(e.key)) { e.preventDefault(); this.go(this.current+1); }
+      else if (['ArrowUp','ArrowLeft','PageUp'].includes(e.key)) { e.preventDefault(); this.go(this.current-1); }
+      else if (e.key === 'Home') { e.preventDefault(); this.go(0); }
+      else if (e.key === 'End')  { e.preventDefault(); this.go(this.total-1); }
+    });
+  }
+  _wheel() {
+    document.addEventListener('wheel', e => {
+      const now = Date.now();
+      if (now - this.lastWheel < 800) return;
+      this.lastWheel = now;
+      this.go(e.deltaY > 0 ? this.current+1 : this.current-1);
+    }, { passive: true });
+  }
+  _touch() {
+    document.addEventListener('touchstart', e => { this.touchStartY = e.touches[0].clientY; }, { passive: true });
+    document.addEventListener('touchend', e => {
+      const dy = this.touchStartY - e.changedTouches[0].clientY;
+      if (Math.abs(dy) > 50) this.go(dy > 0 ? this.current+1 : this.current-1);
+    }, { passive: true });
+  }
+}
+new Presentation();
+</script>
+</body>
+</html>

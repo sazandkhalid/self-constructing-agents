@@ -1,0 +1,21 @@
+[
+  {
+    "file": "extract_iso20022_messages.py",
+    "skill": "extract_iso20022_messages",
+    "version": 1,
+    "tags": [
+      "list",
+      "message",
+      "type",
+      "constants",
+      "defined"
+    ],
+    "verified": true,
+    "protocol": "general",
+    "rail": "general",
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  }
+]

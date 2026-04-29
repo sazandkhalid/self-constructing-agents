@@ -1,145 +1,259 @@
-# self-constructing-agents
+# Self-Constructing Agents
 
-A research system testing the hypothesis: **an LLM agent that accumulates a repo-specific skill library performs measurably better on coding tasks than one starting cold.**
+An AI agent that builds, verifies, and accumulates a permanent library of executable Python skills as a by-product of normal task execution — and reuses them through composition, evolution, and decay.
+
+**Ihsan Alaeddin · Sazan Khalid · Georgetown University · DSAN 6725 · 2026**
 
 ---
 
-## Setup (fresh clone)
+## What it does
+
+Every time the agent solves a task it tries to extract a reusable Python function from its response, run it through a five-gate verification pipeline, and persist it to a growing skill library. On subsequent tasks it selects relevant skills from the library and injects them as context, making it progressively better at the problems it has already seen.
+
+Key behaviours:
+
+- **Skill creation** — agent emits `---PY SKILL---` blocks; functions are AST-parsed, executed, compliance-checked, and adversarially tested before saving
+- **Skill reuse** — two-stage selector (keyword filter → embedding cosine rank → LLM ranker) surfaces relevant skills for each new task
+- **Skill evolution** — skills that accumulate failures are automatically patched by the LLM and re-verified
+- **Skill decay** — skills unused for 14+ days with low relevance scores are archived, keeping the library lean
+- **Tool authoring** — when a capability is missing the agent authors a new MCP tool, runs it through the same four gates, registers it, and calls it in the same turn
+- **RAG** — seven seeded financial-spec documents (ISO 20022, NACHA ACH, SWIFT MX, PCI/GDPR) are retrieved at query time and injected into context
+
+---
+
+## Results
+
+Cold/warm experiment on the FastAPI codebase (6 benchmark tasks across three tiers):
+
+| Condition | Avg score / 3.0 |
+|-----------|----------------|
+| Cold (empty library) | 2.00 |
+| Warm (6 skills built) | 2.67 |
+| **Improvement** | **+33.3%** |
+
+Tier 1 (structural) showed the strongest gain: cold 1.50 → warm 2.50 (+1.00).
+
+---
+
+## Repository layout
+
+```
+self-constructing-agents/
+├── run.py                      # Agent core — LLM loop, skill lifecycle, failure recovery
+├── ask.py                      # Interactive single-task entry point (demo)
+├── compliance.py               # ComplianceShield — static safety gate before skill persist
+├── validation_agent.py         # ValidationAgent — adversarial LLM edge-case testing
+├── mcp_client.py               # MCP tool layer — built-in tools + agent-built tool registry
+├── rag.py                      # RAG layer — financial spec document retrieval
+├── entity_memory.py            # Entity memory — institution-specific facts
+├── payment_trace.py            # Payment simulation trace writer
+│
+├── eval/
+│   ├── run_experiment.py       # Cold/warm experiment harness
+│   ├── score.py                # LLM-as-judge scorer
+│   ├── report.py               # Human-readable report printer
+│   ├── benchmark_tasks.txt     # FastAPI benchmark (15 tasks, 3 tiers)
+│   ├── payment_benchmark_tasks.txt
+│   ├── exploration_tasks.txt
+│   ├── payment_exploration_tasks.txt
+│   └── target_repo/            # Cloned repos used as benchmark context
+│
+├── skills_py/                  # Verified Python skills (auto-managed)
+│   ├── index.json
+│   └── archive/
+│
+├── skills/                     # Markdown skills (legacy)
+├── tools/                      # Agent-built MCP tool registry
+│   └── registry.json
+│
+├── prompts/
+│   └── interactive_task_addendum.txt   # Capability-discovery protocol for ask.py
+│
+├── rag/
+│   └── documents.json          # Seeded financial spec documents
+│
+├── logs/
+│   └── log.jsonl               # Structured run log
+│
+├── memory/
+│   └── episodes.jsonl          # Episodic memory
+│
+├── dashboard/                  # Live payment simulation visualisation
+├── slides/                     # 14-slide presentation deck
+├── poster/                     # Conference poster
+└── .env                        # API keys (not committed)
+```
+
+---
+
+## Setup
+
+**Requirements:** Python 3.11+
 
 ```bash
-git clone https://github.com/sazandkhalid/self-constructing-agents.git
-cd self-constructing-agents/self_building_agent
+# Clone
+git clone https://github.com/sazankhalid/self-constructing-agents
+cd self-constructing-agents
 
-# 1. Create and activate a virtual environment
+# Create and activate venv
 python3 -m venv venv
-source venv/bin/activate          # Windows: venv\Scripts\activate
+source venv/bin/activate
 
-# 2. Install dependencies
+# Install dependencies
 pip install -r requirements.txt
+pip install google-genai yfinance
+```
 
-# 3. Get a free Groq API key at https://console.groq.com
-#    then set it (or add it to .env):
-export GROQ_API_KEY=your_key_here
+**Configure `.env`:**
+
+```
+GEMINI_API_KEY=your_key_here
+GEMINI_MODEL=gemini-2.5-flash
+GEMINI_BUDGET_USD=5.00
+HF_TOKEN=your_hf_token_here        # optional — removes HuggingFace rate limits
+```
+
+Get a free Gemini API key at [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
+
+---
+
+## Try it
+
+### Single-task interactive mode
+
+```bash
+source venv/bin/activate
+
+# Fetches live stock price — agent authors a fetch_stock_price tool on first run
+python ask.py "fetch the current price of AAPL and compute its 5-day moving average"
+
+# Uses free open-meteo API — agent authors a fetch_weather tool
+python ask.py "fetch the current temperature in San Francisco"
+
+# Reuses the validate_iban skill if it exists, or authors a new tool
+python ask.py "validate this IBAN: GB82WEST12345698765432"
+```
+
+The agent will:
+1. Check whether an existing skill or tool can solve the task
+2. If not, author a new MCP tool, run it through the four-gate pipeline, and call it
+3. Print gate-by-gate verification output and the final answer
+
+### Cold/warm experiment (FastAPI benchmark)
+
+```bash
+source venv/bin/activate
+
+EXPLORE_TASKS_FILE=eval/exploration_tasks.txt \
+  python eval/run_experiment.py --max-bench 6 --max-explore 20
+
+python eval/report.py
+```
+
+### Payment simulation (ISO 20022 — no API required)
+
+```bash
+python3 -m http.server 8080 --directory .
+open http://localhost:8080/dashboard/payment_simulation.html
 ```
 
 ---
 
-## FastAPI Experiment
+## The five-gate verification pipeline
 
-Tests the core hypothesis against [FastAPI](https://github.com/tiangolo/fastapi) source code tasks.
+Every skill and agent-built tool passes all five gates or is rejected:
 
-### One-time: clone the target repo
+| Gate | Check |
+|------|-------|
+| 1. AST validity | Code parses without `SyntaxError` |
+| 2. Subprocess test | Code executes and prints `TEST PASSED` |
+| 3. Schema validation | Tools: `input_schema` and `output_schema` present with descriptions |
+| 4. ComplianceShield | No hardcoded credentials, routing numbers, IBANs, or SSNs |
+| 5. ValidationAgent | LLM generates 6 adversarial edge-case tests; all must pass |
 
-```bash
-# from inside self_building_agent/
-git clone --depth=1 https://github.com/tiangolo/fastapi.git eval/target_repo/fastapi
-```
-
-### Quick smoke test (3 tasks each, ~5 minutes)
-
-```bash
-venv/bin/python eval/run_experiment.py --max-bench 3 --max-explore 3
-venv/bin/python eval/report.py
-```
-
-### Full experiment (15 benchmark + 20 exploration, ~45 minutes)
-
-```bash
-venv/bin/python eval/run_experiment.py
-venv/bin/python eval/report.py
-```
-
-### What it tests
-
-Three task tiers against the FastAPI codebase:
-
-- **Tier 1 — Structural**: read and describe real functions, signatures, and patterns
-- **Tier 2 — Pattern**: apply FastAPI patterns to write new code
-- **Tier 3 — Novel**: synthesise cross-cutting knowledge from accumulated skills
-
----
-
-## Payment Rail Experiment
-
-Tests the core hypothesis against financial protocol integration tasks using a synthetic ISO 20022 / ACH codebase (no external clone needed — the target repo is included at `eval/target_repo/iso20022_synthetic/`).
-
-### Quick smoke test (3 tasks each)
-
-```bash
-venv/bin/python eval/run_payment_experiment.py --max-bench 3 --max-explore 3
-venv/bin/python eval/report.py --payment
-```
-
-### Full experiment (15 benchmark + 20 exploration)
-
-```bash
-venv/bin/python eval/run_payment_experiment.py
-venv/bin/python eval/report.py --payment
-```
-
-### What it tests
-
-Three task tiers against the synthetic ISO 20022 / ACH codebase:
-
-- **Tier 1 — Structural**: read the target repo, extract correct information about functions, signatures, and constants
-- **Tier 2 — Translation**: write code that bridges between payment formats (ISO 20022 XML → LedgerEntry, ACHEntry → LedgerEntry, address normalisation, cross-rail reconciliation)
-- **Tier 3 — Synthesis**: abstract reusable patterns from accumulated knowledge (generic validators, dispatcher functions, builder classes, safe-parse utilities)
-
-The hypothesis is that a warm agent (one that has built a skill library during the exploration phase) will score measurably higher on Tier 2 and Tier 3 tasks than a cold agent starting from zero. The Tier 3 delta is the headline signal.
-
-### New skill metadata fields
-
-Payment-domain skills carry additional header fields:
-
-```
-# protocol: iso20022|ach|fedwire|sepa|internal|general
-# rail: swift_mx|fednow|rtp|nacha|sepa_ct|on_chain|general
-# audit_required: true|false
-```
-
-### ComplianceShield
-
-Every payment skill passes through a static analysis check (`compliance.py`) before persisting:
-
-- **BLOCK**: hardcoded routing numbers, IBANs, passwords, SSN patterns, or API keys → skill is rejected and not written to disk
-- **WARN**: skill accesses financial/PII data (`account_number`, `iban`, `debtor`, etc.) without a logging hook → persisted with a `compliance_warn` metadata flag
-- **PASS**: no issues detected → persisted normally
-
-The shield is static analysis only — no LLM calls, no execution.
+Skills and tools that fail any gate are not persisted. Tools that fail gates 1–4 are retried up to three times — the failure gate and error message are fed back to the model so it can correct its implementation.
 
 ---
 
 ## Architecture
 
-The agent loop (`run.py`, ~1500 lines) layers the following systems:
-
-| Layer | File | Purpose |
-|---|---|---|
-| Core loop | `run.py` | Task queue → LLM → skill extraction → verify → persist |
-| Verified skills | `skills_py/` | Executable Python functions with `TEST PASSED` gate |
-| Markdown skills | `skills/` | Conceptual patterns (legacy) |
-| ComplianceShield | `compliance.py` | Static PII/credential check before persist |
-| ValidationAgent | `validation_agent.py` | Adversarial LLM edge-case tests before persist |
-| MCP tools | `mcp_client.py` | 4 builtin tools + agent-built tool registration |
-| RAG | `rag.py` | Financial spec document retrieval injected into prompts |
-| Entity memory | `entity_memory.py` | Per-institution quirks and failure patterns |
-| Episodic memory | `memory/episodes.jsonl` | Semantic retrieval of past task outcomes |
-| Skill evolution | `run.py:evolve_skill` | LLM-patches failing skills (v1 → v2) |
-| Skill decay | `run.py:apply_decay` | Auto-archives stale low-success skills |
-| Dashboard | `dashboard/index.html` | Canvas terrain map of the skill library |
-
-### Dashboard
-
-```bash
-# from self_building_agent/
-python -m http.server 8080
-# open http://localhost:8080/dashboard/
 ```
-
-Dark sci-fi terrain map showing skill nodes, evolution timeline, activity feed, and skill registry. Reads from `logs/log.jsonl` and `skills_py/`.
+Task
+ │
+ ├─ RAG retrieval (7 financial spec docs)
+ ├─ Skill selection (keyword → embedding → LLM ranker)
+ ├─ Episodic memory retrieval
+ │
+ └─ LLM response loop (max 3 iterations)
+      │
+      ├─ Tool authoring?  → register_agent_tools() → 4-gate verify → registry.json
+      ├─ Tool call?       → dispatch_agent_tool()  → run function with real args
+      ├─ EXECUTE block?   → subprocess execution   → result fed back
+      │
+      └─ Final response
+           │
+           ├─ PY SKILL block → materialize_py_skill() → 5-gate verify → skills_py/
+           ├─ Failure detected? → classify → recovery attempt
+           └─ log_result() → logs/log.jsonl
+```
 
 ---
 
-## API key
+## MCP tool authoring format
 
-Both experiments call the [Groq API](https://console.groq.com) using `llama-3.3-70b-versatile`. A free tier account gives 100K tokens/day — enough for the smoke test. The full experiment (~35 tasks) may require waiting for the daily limit to reset or upgrading to a paid plan.
+When the agent needs a capability that does not exist, it emits:
+
+```
+---MCP TOOL---
+name: fetch_stock_price
+description: Fetch the current price and recent history for a stock ticker
+input_schema:
+  ticker:
+    type: string
+    description: Stock ticker symbol e.g. AAPL
+output_schema:
+  current:
+    type: number
+    description: Current price in USD
+code: |
+  import yfinance as yf
+
+  def fetch_stock_price(ticker: str) -> dict:
+      stock = yf.Ticker(ticker)
+      hist = stock.history(period="1d")
+      return {"current": float(hist["Close"].iloc[-1])}
+
+  if __name__ == "__main__":
+      r = fetch_stock_price("AAPL")
+      assert isinstance(r["current"], float) and r["current"] > 0
+      print("TEST PASSED")
+---END MCP TOOL---
+```
+
+Then calls it:
+
+```
+---TOOL CALL---
+{"tool": "fetch_stock_price", "args": {"ticker": "AAPL"}}
+---END TOOL CALL---
+```
+
+Registered tools persist to `tools/registry.json` and are available on all subsequent runs.
+
+---
+
+## Presentation and poster
+
+```bash
+# Start the file server (if not already running)
+python3 -m http.server 8080 --directory .
+
+# 14-slide deck (arrow keys / scroll to navigate)
+open http://localhost:8080/slides/index.html
+
+# Conference poster
+open http://localhost:8080/poster/index.html
+
+# Live payment simulation dashboard
+open http://localhost:8080/dashboard/payment_simulation.html
+```

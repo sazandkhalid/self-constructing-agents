@@ -1,0 +1,21 @@
+[
+  {
+    "file": "create_validation_reproduction.py",
+    "skill": "create_validation_reproduction",
+    "version": 1,
+    "tags": [
+      "synthesize",
+      "fastapi",
+      "handles",
+      "request",
+      "validation"
+    ],
+    "verified": true,
+    "protocol": "general",
+    "rail": "general",
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  }
+]

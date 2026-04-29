@@ -1,0 +1,97 @@
+[
+  {
+    "file": "build_end_to_end_id.py",
+    "skill": "build_end_to_end_id",
+    "version": 1,
+    "tags": [
+      "write",
+      "function",
+      "build_end_to_end_id",
+      "sender_ref",
+      "date_str"
+    ],
+    "verified": true,
+    "protocol": null,
+    "rail": null,
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "count_by_status.py",
+    "skill": "count_by_status",
+    "version": 1,
+    "tags": [
+      "write",
+      "function",
+      "count_by_status",
+      "results",
+      "list"
+    ],
+    "verified": true,
+    "protocol": "general",
+    "rail": "general",
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "dollars_to_cents.py",
+    "skill": "dollars_to_cents",
+    "version": 1,
+    "tags": [
+      "write",
+      "function",
+      "dollars_to_cents",
+      "amount",
+      "float"
+    ],
+    "verified": true,
+    "protocol": "general",
+    "rail": "general",
+    "audit_required": true,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "format_currency_amount.py",
+    "skill": "format_currency_amount",
+    "version": 1,
+    "tags": [
+      "write",
+      "function",
+      "format_currency_amount",
+      "amount",
+      "float"
+    ],
+    "verified": true,
+    "protocol": "general",
+    "rail": "general",
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "make_trace_number.py",
+    "skill": "make_trace_number",
+    "version": 1,
+    "tags": [
+      "write",
+      "function",
+      "make_trace_number",
+      "routing_number",
+      "sequence"
+    ],
+    "verified": true,
+    "protocol": null,
+    "rail": null,
+    "audit_required": false,
+    "compliance_warn": "skill accesses financial/PII data without an audit hook",
+    "success_count": 0,
+    "fail_count": 0
+  }
+]

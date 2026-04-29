@@ -1,0 +1,21 @@
+[
+  {
+    "file": "parse_pacs008.py",
+    "skill": "parse_pacs008",
+    "version": 1,
+    "tags": [
+      "have",
+      "seen",
+      "parse_pacs008",
+      "extract_statement_entries",
+      "both"
+    ],
+    "verified": true,
+    "protocol": null,
+    "rail": null,
+    "audit_required": false,
+    "compliance_warn": "skill accesses financial/PII data without an audit hook",
+    "success_count": 0,
+    "fail_count": 0
+  }
+]

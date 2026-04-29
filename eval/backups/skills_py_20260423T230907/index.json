@@ -1,0 +1,78 @@
+[
+  {
+    "file": "construct_validation_error_payload.py",
+    "skill": "construct_validation_error_payload",
+    "version": 1,
+    "tags": [
+      "read",
+      "fastapi",
+      "exception_handlers",
+      "write",
+      "skill"
+    ],
+    "verified": true,
+    "protocol": null,
+    "rail": null,
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "custom_jsonable_encoder.py",
+    "skill": "custom_jsonable_encoder",
+    "version": 1,
+    "tags": [
+      "look",
+      "fastapi",
+      "encoders",
+      "jsonable_encoder",
+      "produce"
+    ],
+    "verified": true,
+    "protocol": null,
+    "rail": null,
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "identify_starlette_wrapper_classes_in_datastructures.py",
+    "skill": "identify_starlette_wrapper_classes_in_datastructures",
+    "version": 1,
+    "tags": [
+      "inspect",
+      "fastapi",
+      "datastructures",
+      "extract",
+      "utility"
+    ],
+    "verified": true,
+    "protocol": null,
+    "rail": null,
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  },
+  {
+    "file": "re_export_middleware.py",
+    "skill": "re_export_middleware",
+    "version": 1,
+    "tags": [
+      "read",
+      "fastapi",
+      "middleware",
+      "__init__",
+      "produce"
+    ],
+    "verified": true,
+    "protocol": null,
+    "rail": null,
+    "audit_required": false,
+    "compliance_warn": null,
+    "success_count": 0,
+    "fail_count": 0
+  }
+]
